@@ -1,0 +1,154 @@
+model: SeacoParaformer
+model_conf:
+  ctc_weight: 0.0
+  lsm_weight: 0.1
+  length_normalized_loss: true
+  predictor_weight: 1.0
+  predictor_bias: 1
+  sampling_ratio: 0.75
+  inner_dim: 512
+  bias_encoder_type: lstm
+  bias_encoder_bid: false
+  seaco_lsm_weight: 0.1
+  seaco_length_normal: true
+  train_decoder: true
+  NO_BIAS: 8377
+encoder: SANMEncoder
+encoder_conf:
+  output_size: 512
+  attention_heads: 4
+  linear_units: 2048
+  num_blocks: 50
+  dropout_rate: 0.1
+  positional_dropout_rate: 0.1
+  attention_dropout_rate: 0.1
+  input_layer: pe
+  pos_enc_class: SinusoidalPositionEncoder
+  normalize_before: true
+  kernel_size: 11
+  sanm_shfit: 0
+  selfattention_layer_type: sanm
+decoder: ParaformerSANMDecoder
+decoder_conf:
+  attention_heads: 4
+  linear_units: 2048
+  num_blocks: 16
+  dropout_rate: 0.1
+  positional_dropout_rate: 0.1
+  self_attention_dropout_rate: 0.1
+  src_attention_dropout_rate: 0.1
+  att_layer_num: 16
+  kernel_size: 11
+  sanm_shfit: 0
+seaco_decoder: ParaformerSANMDecoder
+seaco_decoder_conf:
+  attention_heads: 4
+  linear_units: 1024
+  num_blocks: 4
+  dropout_rate: 0.1
+  positional_dropout_rate: 0.1
+  self_attention_dropout_rate: 0.1
+  src_attention_dropout_rate: 0.1
+  kernel_size: 21
+  sanm_shfit: 0
+  use_output_layer: false
+  wo_input_layer: true
+predictor: CifPredictorV3
+predictor_conf:
+  idim: 512
+  threshold: 1.0
+  l_order: 1
+  r_order: 1
+  tail_threshold: 0.45
+  smooth_factor2: 0.25
+  noise_threshold2: 0.01
+  upsample_times: 3
+  use_cif1_cnn: false
+  upsample_type: cnn_blstm
+frontend: WavFrontend
+frontend_conf:
+  fs: 16000
+  window: hamming
+  n_mels: 80
+  frame_length: 25
+  frame_shift: 10
+  lfr_m: 7
+  lfr_n: 6
+  dither: 0.0
+  cmvn_file: /data1/pretrained_models/speech_seaco_paraformer_large_asr_nat-zh-cn-16k-common-vocab8404-pytorch/am.mvn
+specaug: SpecAugLFR
+specaug_conf:
+  apply_time_warp: false
+  time_warp_window: 5
+  time_warp_mode: bicubic
+  apply_freq_mask: true
+  freq_mask_width_range:
+  - 0
+  - 30
+  lfr_rate: 6
+  num_freq_mask: 1
+  apply_time_mask: true
+  time_mask_width_range:
+  - 0
+  - 12
+  num_time_mask: 1
+train_conf:
+  accum_grad: 1
+  grad_clip: 5
+  max_epoch: 40
+  val_scheduler_criterion:
+  - valid
+  - acc
+  best_model_criterion:
+  - - valid
+    - acc
+    - max
+  keep_nbest_models: 5
+  log_interval: 1
+  unused_parameters: true
+  resume: false
+  validate_interval: 4000
+  save_checkpoint_interval: 4000
+  avg_keep_nbest_models_type: loss
+  avg_nbest_model: 5
+  find_unused_parameters: true
+optim: adam
+optim_conf:
+  lr: 5.0e-05
+scheduler: warmuplr
+scheduler_conf:
+  warmup_steps: 3000
+dataset: AudioDatasetHotword
+dataset_conf:
+  seaco_id: 8377
+  index_ds: IndexDSJsonl
+  batch_sampler: DynamicBatchLocalShuffleSampler
+  batch_type: token
+  batch_size: 60000
+  max_token_length: 2048
+  buffer_size: 500
+  shuffle: true
+  num_workers: 8
+tokenizer: CharTokenizer
+tokenizer_conf:
+  unk_symbol: <unk>
+  split_with_space: true
+  token_list: /data1/pretrained_models/speech_seaco_paraformer_large_asr_nat-zh-cn-16k-common-vocab8404-pytorch/tokens.json
+  seg_dict_file: /data1/pretrained_models/speech_seaco_paraformer_large_asr_nat-zh-cn-16k-common-vocab8404-pytorch/seg_dict
+ctc_conf:
+  dropout_rate: 0.0
+  ctc_type: builtin
+  reduce: true
+  ignore_nan_grad: true
+normalize: null
+init_param: /data1/pretrained_models/speech_seaco_paraformer_large_asr_nat-zh-cn-16k-common-vocab8404-pytorch/model.pt
+config: /data1/pretrained_models/speech_seaco_paraformer_large_asr_nat-zh-cn-16k-common-vocab8404-pytorch/config.yaml
+is_training: true
+train_data_set_list: /data1/label/all_label/train/train.jsonl
+valid_data_set_list: /data1/label/all_label/dev/dev.jsonl
+freeze_param:
+- hotword_output_layer
+- seaco_decoder
+output_dir: /data1/train_outputs
+model_path: /data1/pretrained_models/speech_seaco_paraformer_large_asr_nat-zh-cn-16k-common-vocab8404-pytorch
+device: cpu

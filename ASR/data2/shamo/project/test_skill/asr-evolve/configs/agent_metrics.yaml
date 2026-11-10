@@ -1,0 +1,27 @@
+# Agent 效能指标参考
+# 这些是 Kiro 在 THINK 阶段分析效能数据时的参考标准
+# 不被代码消费——Kiro 自行解读 agent-report 输出
+
+reference_targets:
+  decision_accuracy:
+    healthy: "> 60%"
+    acceptable: "40% ~ 60%"
+    concerning: "< 40%"
+
+  cumulative_efficiency:
+    unit: "%CER per GPU-hour"
+    note: "越高越好，无固定阈值"
+
+  marginal_vs_cumulative:
+    healthy: "边际 ≈ 累积"
+    bottleneck: "边际 < 累积 × 0.5"
+    accelerating: "边际 > 累积"
+
+  exploration_waste:
+    healthy: "< 30%"
+    high: "> 30%"
+
+  category_accuracy:
+    dead_end_signal: "0% 且尝试 ≥ 2 次"
+    promising: "≥ 50%"
+    untried: "值得探索"

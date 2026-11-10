@@ -1,0 +1,105 @@
+<mxfile host="65bd71144e">
+    <diagram name="系统总体架构" id="arch">
+        <mxGraphModel dx="957" dy="726" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="700" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="10" value="用户层（浏览器）" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=11;fontStyle=1;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="100" y="20" width="800" height="32" as="geometry"/>
+                </mxCell>
+                <mxCell id="20" value="Web 管理控制台（Vue.js）" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=10;fontStyle=1;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="100" y="72" width="800" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="21" value="项目管理" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=9;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="110" y="105" width="120" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="22" value="数据管理" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=9;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="240" y="105" width="120" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="23" value="Agent交互" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=9;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="370" y="105" width="120" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="24" value="评测分析" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=9;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="500" y="105" width="120" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="25" value="Trace视图" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=9;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="630" y="105" width="120" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="26" value="实验看板" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=9;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="760" y="105" width="120" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="30" value="RESTful API 服务层（FastAPI）" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=10;fontStyle=1;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="100" y="149" width="800" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="76" style="edgeStyle=none;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="31" target="50">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="31" value="项目接口 | 数据接口 | 热词接口 | Agent接口 | Trace接口 | 版本接口 | 认证接口" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=8;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="110" y="180" width="780" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="40" value="数据库持久化层（MySQL + Redis）" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=10;fontStyle=1;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="100" y="220" width="380" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="41" value="实验记录 | 版本管理 | 评测结果 | Trace链路 | 用户权限" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=8;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="100" y="260" width="380" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="50" value="Agent 决策引擎（每用户独立实例）" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=10;fontStyle=1;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="100" y="290" width="800" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="77" style="edgeStyle=none;html=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.583;entryY=-0.042;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="51" target="60">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="78" style="edgeStyle=none;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="51">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="630" y="360" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="51" value="Prompt Builder | LLM推理核心 | Tool/Skill Dispatcher | Context Engine | Iteration Budget | Trajectory Logger" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=8;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="110" y="321" width="780" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="60" value="通用工具层（Tool）" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=9;fontStyle=1;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="100" y="361" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="61" value="read_file | write_file | run_cmd | edit_yaml | query_db" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=8;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="100" y="385" width="240" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="62" value="领域技能层（Skill）— 10个ASR处理技能" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=9;fontStyle=1;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="360" y="361" width="540" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="79" style="edgeStyle=none;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="63" target="70">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="63" value="prepare | quality | split | augment | merge | manifest | train | eval | analyze | edit_config" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=8;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="360" y="385" width="540" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="70" value="远程训练环境适配层" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=10;fontStyle=1;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="100" y="425" width="800" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="80" style="edgeStyle=none;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;" edge="1" parent="1" source="71">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="500" y="480" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="71" value="RemoteExecutor（SSH） | TrainingEngine（健康检查） | EvalEngine（推理+指标计算）" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=8;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="110" y="456" width="780" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="74" value="远程 GPU 训练集群" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=10;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="330" y="496" width="340" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" style="strokeColor=#333333;exitX=0.5;exitY=1;entryX=0.5;entryY=0" parent="1" source="10" target="20" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" style="strokeColor=#333333;entryX=0.5;entryY=0" parent="1" target="40" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="400" y="200" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e3" style="strokeColor=#333333;entryX=0.5;entryY=0" parent="1" target="74" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="500" y="480" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

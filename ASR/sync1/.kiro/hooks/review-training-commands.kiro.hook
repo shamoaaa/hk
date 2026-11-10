@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "Review Training Commands",
+  "description": "在执行 shell 命令前自动检查：1) 数据路径是否正确（使用增强数据）2) GPU 选择是否合理 3) 训练/增强参数是否在合理范围内。如有异常提醒用户确认。",
+  "version": "1",
+  "when": {
+    "type": "preToolUse",
+    "toolTypes": [
+      "shell"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "检查即将执行的 shell 命令，重点关注：\n1. 如果是训练/推理命令，数据路径是否指向 data/augmented/ 下的增强数据\n2. GPU ID 是否是空闲的（当前应使用 GPU 4 或 5）\n3. 学习率、epoch、batch_size 等参数是否在合理范围\n4. 是否在正确的工作目录（workspace/）下执行\n5. 是否设置了 PYTHONPATH=.\n\n如果发现问题，用中文简要提醒用户并建议修正。如果一切正常，简要说明即将执行什么操作。"
+  }
+}

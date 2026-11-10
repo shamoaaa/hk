@@ -1,0 +1,25 @@
+@startuml
+skinparam defaultFontName "Microsoft YaHei"
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+
+actor "项目Owner" as Owner
+
+rectangle "系统" {
+  usecase "与Agent交互" as UC1
+  usecase "管理公共数据集" as UC2
+  usecase "管理热词文件" as UC3
+  usecase "修改训练/增强配置" as UC4
+  usecase "启动/停止Agent" as UC5
+  usecase "查看实验/Trace/评测" as UC6
+}
+
+Owner --> UC1
+Owner --> UC2
+Owner --> UC3
+Owner --> UC4
+Owner --> UC5
+Owner --> UC6
+@enduml

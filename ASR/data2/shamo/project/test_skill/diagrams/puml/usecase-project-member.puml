@@ -1,0 +1,21 @@
+@startuml
+skinparam defaultFontName "Microsoft YaHei"
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+
+actor "项目Member" as Member
+
+rectangle "系统" {
+  usecase "与Agent交互" as UC1
+  usecase "上传个人数据集" as UC2
+  usecase "发起实验" as UC3
+  usecase "查看实验/Trace/评测" as UC4
+}
+
+Member --> UC1
+Member --> UC2
+Member --> UC3
+Member --> UC4
+@enduml

@@ -1,0 +1,684 @@
+{
+  "experiment": "changtang_20251226",
+  "samples": 835,
+  "pigs": 167,
+  "forced_negative_samples": 0,
+  "threshold": 0.52,
+  "sample_label_distribution": {
+    "0": 334,
+    "1": 501
+  },
+  "sample_metrics": {
+    "accuracy": 0.9592814371257485,
+    "precision": 0.9587426326129665,
+    "recall": 0.9740518962075848,
+    "f1": 0.9663366336633663,
+    "auc": 0.987121565252728,
+    "confusion_matrix": [
+      [
+        488,
+        21
+      ],
+      [
+        13,
+        313
+      ]
+    ]
+  },
+  "pig_metrics": {
+    "accuracy": 0.9461077844311377,
+    "precision": 1.0,
+    "recall": 0.9461077844311377,
+    "confusion_matrix": [
+      [
+        158,
+        0
+      ],
+      [
+        9,
+        0
+      ]
+    ],
+    "confusion_matrix_pigs": [
+      [
+        "changtang_31351_20251226",
+        "changtang_31083_20251226",
+        "changtang_20548_20251226",
+        "changtang_30000_20251226",
+        "changtang_30283_20251226",
+        "changtang_30315_20251226",
+        "changtang_30842_20251226",
+        "changtang_18538_20251226",
+        "changtang_30318_20251226",
+        "changtang_20843_20251226",
+        "changtang_30775_20251226",
+        "changtang_30801_20251226",
+        "changtang_31346_20251226",
+        "changtang_30800_20251226",
+        "changtang_31042_20251226",
+        "changtang_30031_20251226",
+        "changtang_31352_20251226",
+        "changtang_30839_20251226",
+        "changtang_16692_20251226",
+        "changtang_16688_20251226",
+        "changtang_13625_20251226",
+        "changtang_31309_20251226",
+        "changtang_31300_20251226",
+        "changtang_30024_20251226",
+        "changtang_31308_20251226",
+        "changtang_31302_20251226",
+        "changtang_13624_20251226",
+        "changtang_30294_20251226",
+        "changtang_31047_20251226",
+        "changtang_31287_20251226",
+        "changtang_31029_20251226",
+        "changtang_31316_20251226",
+        "changtang_31319_20251226",
+        "changtang_31322_20251226",
+        "changtang_29764_20251226",
+        "changtang_30537_20251226",
+        "changtang_31303_20251226",
+        "changtang_16693_20251226",
+        "changtang_20787_20251226",
+        "changtang_30827_20251226",
+        "changtang_30585_20251226",
+        "changtang_31078_20251226",
+        "changtang_30834_20251226",
+        "changtang_31330_20251226",
+        "changtang_31343_20251226",
+        "changtang_30565_20251226",
+        "changtang_30321_20251226",
+        "changtang_30804_20251226",
+        "changtang_30567_20251226",
+        "changtang_31282_20251226",
+        "changtang_29796_20251226",
+        "changtang_14131_20251226",
+        "changtang_24882_20251226",
+        "changtang_29537_20251226",
+        "changtang_31096_20251226",
+        "changtang_31058_20251226",
+        "changtang_30796_20251226",
+        "changtang_30516_20251226",
+        "changtang_31080_20251226",
+        "changtang_31032_20251226",
+        "changtang_29817_20251226",
+        "changtang_31062_20251226",
+        "changtang_30520_20251226",
+        "changtang_30828_20251226",
+        "changtang_31057_20251226",
+        "changtang_31079_20251226",
+        "changtang_30295_20251226",
+        "changtang_30822_20251226",
+        "changtang_31097_20251226",
+        "changtang_31341_20251226",
+        "changtang_30529_20251226",
+        "changtang_29798_20251226",
+        "changtang_31347_20251226",
+        "changtang_30289_20251226",
+        "changtang_30785_20251226",
+        "changtang_30298_20251226",
+        "changtang_30279_20251226",
+        "changtang_29545_20251226",
+        "changtang_31336_20251226",
+        "changtang_29762_20251226",
+        "changtang_30311_20251226",
+        "changtang_30532_20251226",
+        "changtang_30584_20251226",
+        "changtang_31052_20251226",
+        "changtang_31084_20251226",
+        "changtang_30771_20251226",
+        "changtang_31065_20251226",
+        "changtang_20792_20251226",
+        "changtang_30574_20251226",
+        "changtang_30297_20251226",
+        "changtang_29751_20251226",
+        "changtang_30791_20251226",
+        "changtang_31313_20251226",
+        "changtang_30576_20251226",
+        "changtang_31046_20251226",
+        "changtang_30541_20251226",
+        "changtang_30278_20251226",
+        "changtang_30316_20251226",
+        "changtang_30773_20251226",
+        "changtang_30794_20251226",
+        "changtang_30831_20251226",
+        "changtang_30007_20251226",
+        "changtang_21880_20251226",
+        "changtang_31063_20251226",
+        "changtang_31304_20251226",
+        "changtang_31091_20251226",
+        "changtang_31027_20251226",
+        "changtang_13876_20251226",
+        "changtang_30323_20251226",
+        "changtang_31315_20251226",
+        "changtang_30544_20251226",
+        "changtang_31049_20251226",
+        "changtang_30821_20251226",
+        "changtang_30803_20251226",
+        "changtang_30550_20251226",
+        "changtang_30518_20251226",
+        "changtang_31090_20251226",
+        "changtang_31281_20251226",
+        "changtang_31348_20251226",
+        "changtang_30579_20251226",
+        "changtang_31305_20251226",
+        "changtang_30281_20251226",
+        "changtang_30292_20251226",
+        "changtang_31329_20251226",
+        "changtang_30320_20251226",
+        "changtang_29552_20251226",
+        "changtang_13881_20251226",
+        "changtang_31306_20251226",
+        "changtang_29526_20251226",
+        "changtang_31301_20251226",
+        "changtang_31055_20251226",
+        "changtang_29519_20251226",
+        "changtang_31077_20251226",
+        "changtang_30326_20251226",
+        "changtang_30768_20251226",
+        "changtang_30282_20251226",
+        "changtang_30552_20251226",
+        "changtang_30570_20251226",
+        "changtang_31094_20251226",
+        "changtang_13622_20251226",
+        "changtang_26691_20251226",
+        "changtang_30586_20251226",
+        "changtang_21878_20251226",
+        "changtang_30324_20251226",
+        "changtang_31310_20251226",
+        "changtang_30810_20251226",
+        "changtang_31073_20251226",
+        "changtang_30777_20251226",
+        "changtang_30296_20251226",
+        "changtang_13878_20251226",
+        "changtang_20823_20251226",
+        "changtang_19310_20251226",
+        "changtang_31289_20251226",
+        "changtang_30280_20251226",
+        "changtang_13873_20251226",
+        "changtang_30809_20251226",
+        "changtang_18007_20251226",
+        "changtang_30309_20251226"
+      ],
+      [],
+      [
+        "changtang_30019_20251226",
+        "changtang_30314_20251226",
+        "changtang_31333_20251226",
+        "changtang_19054_20251226",
+        "changtang_13877_20251226",
+        "changtang_31354_20251226",
+        "changtang_13874_20251226",
+        "changtang_13872_20251226",
+        "changtang_13880_20251226"
+      ],
+      []
+    ],
+    "sign_count": {
+      "-2": 154,
+      "-3": 8,
+      "-1": 4,
+      "-4": 1
+    }
+  },
+  "feature_report": {
+    "mode": "test",
+    "experiments": [
+      "changtang_20251226"
+    ],
+    "selected_pigs": 276,
+    "usable_pigs": 167,
+    "skipped_pigs": 109,
+    "skipped_by_category": {
+      "culled": 105,
+      "label_missing": 3,
+      "oestrus_not_bred": 1
+    },
+    "skipped_details": [
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29777_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29747_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29527_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29518_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29773_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29814_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30023_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30033_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29778_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "label_missing",
+        "reason": "changtang_20251226/changtang_31312_20251226 标签首列没有雷达 ID 31312"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29766_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29557_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29512_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30259_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29540_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29784_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29775_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30006_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30058_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30020_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_24910_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29774_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29806_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_19279_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30022_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30061_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29511_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29505_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_25196_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29779_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_31345_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29750_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29543_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29524_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_19317_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29556_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30265_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29753_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29494_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30521_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "label_missing",
+        "reason": "changtang_20251226/changtang_26453_20251226 标签首列没有雷达 ID 26453"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_31026_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29514_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29786_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29550_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30018_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29776_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30805_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29808_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_20322_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29781_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_14128_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29770_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29797_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_16690_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30059_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30062_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29522_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_25460_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29815_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29746_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29816_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30070_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30039_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29506_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29807_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30063_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_31285_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_31344_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29805_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29752_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29801_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30029_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30068_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29812_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29515_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30260_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30535_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29799_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_31045_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30009_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29555_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_31298_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "oestrus_not_bred",
+        "reason": "changtang_20251226/changtang_30040_20251226 发情未配种，测试剔除"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29560_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_21076_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29538_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_24945_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30067_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29529_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30306_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29521_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30330_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29542_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30003_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29554_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_31353_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29818_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29495_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30056_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30317_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30008_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30305_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29811_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_30041_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29780_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29510_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "culled",
+        "reason": "changtang_20251226/changtang_29562_20251226 配种标签为 -1（淘汰）"
+      },
+      {
+        "category": "label_missing",
+        "reason": "changtang_20251226/changtang_30820_20251226 标签首列没有雷达 ID 30820"
+      }
+    ],
+    "generated_samples": 835,
+    "skipped_nonfinite_samples": 0,
+    "warnings": [
+      "changtang_20251226/changtang_20548_20251226 标签中雷达 ID 20548 重复 2 次，使用第一行"
+    ]
+  },
+  "predictions_path": "D:\\project\\pig\\mypig\\radar_pig_pkg\\workspace\\skill_real_run\\results_20251226\\changtang_20251226\\sample_predictions.csv",
+  "pig_results_path": "D:\\project\\pig\\mypig\\radar_pig_pkg\\workspace\\skill_real_run\\results_20251226\\changtang_20251226\\pig_results.json",
+  "metrics_path": "D:\\project\\pig\\mypig\\radar_pig_pkg\\workspace\\skill_real_run\\results_20251226\\changtang_20251226\\metrics.json"
+}

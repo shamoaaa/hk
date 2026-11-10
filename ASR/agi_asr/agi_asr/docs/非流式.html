@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EzvizModelBackend.forward() 非流式推理流程</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, "Microsoft YaHei", sans-serif; background: #0f172a; color: #e2e8f0; padding: 40px 20px; }
+  h1 { text-align: center; font-size: 24px; color: #38bdf8; margin-bottom: 8px; }
+  .subtitle { text-align: center; font-size: 13px; color: #64748b; margin-bottom: 40px; }
+  .flow { display: flex; flex-direction: column; align-items: center; gap: 0; max-width: 900px; margin: 0 auto; }
+  .arrow { width: 2px; height: 28px; background: #475569; position: relative; }
+  .arrow::after { content: ''; position: absolute; bottom: -5px; left: -4px; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid #475569; }
+  .arrow-label { font-size: 11px; color: #94a3b8; position: absolute; left: 14px; top: 4px; white-space: nowrap; }
+
+  .node { border-radius: 10px; padding: 16px 22px; width: 100%; max-width: 820px; position: relative; }
+  .node-title { font-weight: 700; font-size: 14px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+  .node-title .tag { font-size: 10px; padding: 2px 7px; border-radius: 4px; font-weight: 600; }
+  .node-body { font-size: 12.5px; line-height: 1.7; color: #cbd5e1; }
+  .node-body code { background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 3px; font-size: 11.5px; color: #7dd3fc; font-family: "Cascadia Code", "Fira Code", monospace; }
+  .node-body .dim { color: #64748b; }
+  .node-body .highlight { color: #fbbf24; font-weight: 600; }
+  .node-body ul { margin: 4px 0 0 18px; }
+  .node-body li { margin-bottom: 2px; }
+
+  .phase-entry  { background: linear-gradient(135deg, #1e3a5f, #1e293b); border: 1px solid #2563eb; }
+  .phase-entry .node-title { color: #60a5fa; }
+  .phase-entry .tag { background: #1d4ed8; color: #bfdbfe; }
+
+  .phase-decode { background: linear-gradient(135deg, #1a2e1a, #1e293b); border: 1px solid #22c55e; }
+  .phase-decode .node-title { color: #4ade80; }
+  .phase-decode .tag { background: #166534; color: #bbf7d0; }
+
+  .phase-model  { background: linear-gradient(135deg, #2d1f3d, #1e293b); border: 1px solid #a855f7; }
+  .phase-model .node-title { color: #c084fc; }
+  .phase-model .tag { background: #6b21a8; color: #e9d5ff; }
+
+  .phase-hw     { background: linear-gradient(135deg, #3b2314, #1e293b); border: 1px solid #f97316; }
+  .phase-hw .node-title { color: #fb923c; }
+  .phase-hw .tag { background: #9a3412; color: #fed7aa; }
+
+  .phase-post   { background: linear-gradient(135deg, #1e293b, #1e293b); border: 1px solid #64748b; }
+  .phase-post .node-title { color: #94a3b8; }
+  .phase-post .tag { background: #475569; color: #e2e8f0; }
+
+  .phase-out    { background: linear-gradient(135deg, #1e3a5f, #1e293b); border: 1px solid #06b6d4; }
+  .phase-out .node-title { color: #22d3ee; }
+  .phase-out .tag { background: #0e7490; color: #cffafe; }
+
+  .branch { display: flex; gap: 12px; width: 100%; max-width: 820px; }
+  .branch .node { flex: 1; }
+
+  .section-label { font-size: 11px; color: #475569; letter-spacing: 2px; text-transform: uppercase; margin: 16px 0 8px; font-weight: 700; }
+
+  .file-ref { font-size: 11px; color: #475569; margin-top: 4px; }
+  .file-ref a { color: #475569; text-decoration: none; }
+</style>
+</head>
+<body>
+
+<h1>EzvizModelBackend.forward() 非流式推理流程</h1>
+<p class="subtitle">asr/ezviz_backend.py → asr/funasr/bin/asr_inference_paraformer_vad_tp.py → SeacoParaformer</p>
+
+<div class="flow">
+
+<!-- ========== 阶段1: 入口 ========== -->
+<div class="section-label">阶段一 · 请求入口与参数校验</div>
+
+<div class="node phase-entry">
+  <div class="node-title"><span class="tag">入口</span> EzvizModelBackend.forward(rqs_info, rsp_msg)</div>
+  <div class="node-body">
+    HTTP 请求经 MS_Manager 框架路由到 <code>/process</code> 接口，调用此方法。
+    <div class="file-ref">📄 asr/ezviz_backend.py : 168</div>
+  </div>
+</div>
+
+<div class="arrow"><span class="arrow-label"></span></div>
+
+<div class="node phase-entry">
+  <div class="node-title"><span class="tag">校验</span> 入参检查</div>
+  <div class="node-body">
+    <ul>
+      <li>检查 <code>data_info</code> 长度必须为 1</li>
+      <li>检查 <code>modal</code> 必须为 <code>"audio"</code>，<code>type</code> 必须为 <code>"base64"</code> 或 <code>"url"</code></li>
+      <li>任一不满足 → 返回 <code>InvalidParamError</code>，流程终止</li>
+    </ul>
+  </div>
+</div>
+
+<div class="arrow"><span class="arrow-label"></span></div>
+
+<div class="node phase-hw">
+  <div class="node-title"><span class="tag">热词</span> 热词列表合并</div>
+  <div class="node-body">
+    将默认热词 <code>["萤石"]</code> 与请求中传入的自定义热词合并，写入 <code>self.param_dict['hotword']</code>。
+    <br>若请求未携带热词，则仅使用默认热词。
+  </div>
+</div>
+
+<div class="arrow"><span class="arrow-label"></span></div>
+
+<!-- ========== 阶段2: 音频解码 ========== -->
+<div class="section-label">阶段二 · 音频解码</div>
+
+<div class="node phase-decode">
+  <div class="node-title"><span class="tag">解码</span> 音频数据解码与格式适配</div>
+  <div class="node-body">
+    根据 <code>type</code> 字段分支处理：
+    <ul>
+      <li><span class="highlight">base64</span> → <code>base64_decode()</code> 解码为 PCM bytes → 封装为 <code>[bytes, "speech", "bytes", "id1"]</code></li>
+      <li><span class="highlight">url → .pcm</span> → 直接读取文件二进制 → 同上</li>
+      <li><span class="highlight">url → .wav/.opus</span> → <code>torchaudio.load()</code> 加载为 waveform numpy 数组 → 封装为 <code>[ndarray, "speech", "waveform", "id1"]</code>
+        <br><span class="dim">若采样率 ≠ 16000，记录 infer_fs 用于后续重采样</span></li>
+      <li><span class="highlight">url → .aac</span> → <code>pydub.AudioSegment</code> 解码 → 转 float32 numpy → 同上</li>
+    </ul>
+    输出：<code>data_path_and_name_and_type</code>（统一格式的音频数据）+ <code>infer_fs</code>（采样率信息）
+  </div>
+</div>
+
+<div class="arrow"><span class="arrow-label">data_path_and_name_and_type, param_dict, infer_fs — 统一格式的音频数据 + 热词参数 + 采样率信息</span></div>
+
+<!-- ========== 阶段3: inference_offline ========== -->
+<div class="section-label">阶段三 · 推理 Pipeline（inference_tp._forward）</div>
+
+<div class="node phase-model">
+  <div class="node-title"><span class="tag">Pipeline</span> self.inference_offline() → _forward 闭包</div>
+  <div class="node-body">
+    调用 <code>inference_tp</code> 初始化时返回的 <code>_forward</code> 闭包，进入推理主流程。
+    <div class="file-ref">📄 asr/funasr/bin/asr_inference_paraformer_vad_tp.py : 556</div>
+  </div>
+</div>
+
+<div class="arrow"><span class="arrow-label"></span></div>
+
+<div class="node phase-hw">
+  <div class="node-title"><span class="tag">热词</span> 热词列表生成 — generate_hotwords_list()</div>
+  <div class="node-body">
+    将字符串热词列表转换为 token ID 序列：
+    <ul>
+      <li>每个热词 → 小写 → 正则过滤（去除长数字串、特殊编码）→ 中英文加空格分词</li>
+      <li>若有 <code>seg_dict</code>（分词词典），进一步做子词分词</li>
+      <li>通过 <code>TokenIDConverter.tokens2ids()</code> 转为 token ID 列表</li>
+      <li>过滤：单个热词 ≤ 10 token，总数 ≤ 500 个</li>
+      <li>末尾追加 <code>[sos]</code> 作为哨兵</li>
+    </ul>
+    输出：<code>hotword_list</code> = <code>[[id1, id2, ...], [id3, id4, ...], ..., [sos]]</code>
+  </div>
+</div>
+
+<div class="arrow"><span class="arrow-label"></span></div>
+
+<div class="node phase-decode">
+  <div class="node-title"><span class="tag">数据</span> 构建数据迭代器 — ASRTask.build_streaming_iterator()</div>
+  <div class="node-body">
+    将音频数据封装为 PyTorch DataLoader：
+    <ul>
+      <li>bytes 类型 → <code>load_bytes()</code> 转 int16 → float32 归一化</li>
+      <li>waveform 类型 → 直接使用 numpy 数组</li>
+      <li>若 <code>infer_fs</code> 不为 None → 执行重采样到 16kHz</li>
+      <li>通过 <code>collate_fn</code> 做 padding，输出 <code>batch = {speech: Tensor, speech_lengths: Tensor}</code></li>
+    </ul>
+  </div>
+</div>
+
+<div class="arrow"><span class="arrow-label">batch = {speech, speech_lengths} — 音频张量 + 长度，已 padding 对齐</span></div>
+
+<!-- ========== 阶段4: Speech2Text.__call__ ========== -->
+<div class="section-label">阶段四 · 模型推理（Speech2Text.__call__）</div>
+
+<div class="node phase-model">
+  <div class="node-title"><span class="tag">前端</span> WavFrontend — 声学特征提取（两条路径）</div>
+  <div class="node-body">
+    根据 <code>eable_vad</code> 参数选择不同的前端处理路径：
+    <div style="display:flex; gap:10px; margin-top:8px;">
+      <div style="flex:1; padding:10px; background:rgba(0,0,0,0.2); border-radius:6px;">
+        <div style="color:#c084fc; font-weight:700; font-size:12px; margin-bottom:6px;">eable_vad = False → forward()（完整流程）</div>
+        <div style="font-size:11.5px;">
+          输入：原始波形 waveform
+          <ol style="margin:4px 0 0 16px;">
+            <li>波形 × 2<sup>15</sup> 放大（int16 量化范围）</li>
+            <li><code>kaldi.fbank()</code>：80 维 Mel 滤波器组，25ms 帧长，10ms 帧移，Hamming 窗</li>
+            <li><code>apply_lfr()</code>：低帧率（LFR）特征拼接，连续 m 帧拼为一帧（m=7, n=6）→ 560 维</li>
+            <li><code>apply_cmvn()</code>：倒谱均值方差归一化（从 am.mvn 加载统计量）</li>
+          </ol>
+          <span class="dim">本项目非流式推理走此路径（默认 eable_vad=False）</span>
+        </div>
+      </div>
+      <div style="flex:1; padding:10px; background:rgba(0,0,0,0.2); border-radius:6px;">
+        <div style="color:#c084fc; font-weight:700; font-size:12px; margin-bottom:6px;">eable_vad = True → forward_lfr_cmvn()（半程流程）</div>
+        <div style="font-size:11.5px;">
+          输入：已提取的 FBank 特征（由 VAD 模块预先计算）
+          <ol style="margin:4px 0 0 16px;">
+            <li><span class="dim" style="text-decoration:line-through;">FBank 提取（跳过，VAD 已完成）</span></li>
+            <li><code>apply_lfr()</code>：LFR 拼帧</li>
+            <li><code>apply_cmvn()</code>：CMVN 归一化</li>
+          </ol>
+          <span class="dim">当 VAD 已对音频做过 FBank 提取时使用，避免重复计算</span>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:8px;">输出：<code>feats</code> <span class="dim">[B, T', 560]</span>，<code>feats_len</code> <span class="dim">[B]</span></div>
+    <div class="file-ref">📄 asr/funasr/models/frontend/wav_frontend.py : 118 (forward) / 186 (forward_lfr_cmvn)</div>
+  </div>
+</div>
+
+<div class="arrow"><span class="arrow-label">feats [B, T', 560] — 归一化后的声学特征（B=批次, T'=帧数, 560=80维FBank×7帧LFR拼接）</span></div>
+
+<div class="node phase-model">
+  <div class="node-title"><span class="tag">编码器</span> SeacoParaformer.encode() — 编码器前向</div>
+  <div class="node-body">
+    SANM（Self-Attention with Non-linear Memory）编码器：
+    <ul>
+      <li>输入嵌入 + 位置编码</li>
+      <li>多层 SANM Encoder Layer（Self-Attention + FeedForward + FSMN Memory）</li>
+      <li>子采样（Conv2D 4倍下采样）</li>
+    </ul>
+    输出：<code>enc</code> <span class="dim">[B, T'', D_enc]</span>，<code>enc_len</code> <span class="dim">[B]</span>
+    <div class="file-ref">📄 asr/funasr/models/e2e_asr_paraformer.py : 269 (Paraformer.encode)</div>
+  </div>
+</div>
+
+<div class="arrow"><span class="arrow-label">enc [B, T'', D_enc] — 编码器输出（T''=下采样后帧数, D_enc=编码器隐层维度）</span></div>
+
+<div class="node phase-model">
+  <div class="node-title"><span class="tag">CIF</span> calc_predictor() — CIF 预测器</div>
+  <div class="node-body">
+    Continuous Integrate-and-Fire（CIF）机制，预测输出 token 数量和声学嵌入：
+    <ul>
+      <li>对编码器输出逐帧计算发射概率 <code>alphas</code> <span class="dim">[B, T'']</span></li>
+      <li>累积 alpha 值，当累积值 ≥ 1.0 时触发一次"发射"（peak）</li>
+      <li>在 peak 位置加权聚合编码器输出，生成声学嵌入</li>
+    </ul>
+    输出：
+    <ul>
+      <li><code>pre_acoustic_embeds</code> <span class="dim">[B, N_token, D_enc]</span> — 预测的声学嵌入</li>
+      <li><code>pre_token_length</code> <span class="dim">[B]</span> — 预测的 token 数量</li>
+      <li><code>alphas</code> <span class="dim">[B, T'']</span> — 发射概率</li>
+      <li><code>pre_peak_index</code> — peak 位置索引</li>
+    </ul>
+    <span class="dim">若 max(pre_token_length) < 1 → 返回空结果（静音/噪声）</span>
+  </div>
+</div>
+
+<div class="arrow"><span class="arrow-label">pre_acoustic_embeds [B, N, D] — CIF预测的声学嵌入, pre_token_length [B] — 预测的token数量</span></div>
+
+<div class="node phase-model">
+  <div class="node-title"><span class="tag">SeACo</span> _seaco_decode_with_ASF() — SeACo 解码 + 热词增强</div>
+  <div class="node-body">
+    SeACo（Semantic-Aware Contextual）解码，核心分为 4 步：
+    <ol style="margin-left:18px; margin-top:6px;">
+      <li style="margin-bottom:8px;">
+        <span class="highlight">基础解码</span>：Transformer Decoder 接收编码器输出 + CIF 声学嵌入 → 输出 <code>decoder_out</code> + <code>decoder_hidden</code>
+        <br><code>decoder_pred = log_softmax(decoder_out)</code> <span class="dim">[B, N, Vocab]</span>
+      </li>
+      <li style="margin-bottom:8px;">
+        <span class="highlight">热词表示</span>（_hotword_representation）：
+        <br>热词 token IDs → Decoder Embedding → 双向 LSTM 编码 → 取最后一个有效时间步的隐状态作为热词向量
+        <br>输出 <code>selected</code> <span class="dim">[N_hw, D]</span>
+      </li>
+      <li style="margin-bottom:8px;">
+        <span class="highlight">ASF 过滤</span>（Attention Score Filter）：
+        <br>用 <code>seaco_decoder.forward_asf6()</code> 计算每个热词与解码隐状态的注意力分数
+        <br>取 Top-50 热词（<code>nfilter=50</code>），过滤掉不相关热词，降低计算量
+      </li>
+      <li style="margin-bottom:8px;">
+        <span class="highlight">SeACo 偏置解码</span>：
+        <br><code>cif_attended</code> = seaco_decoder(热词向量, CIF 声学嵌入)
+        <br><code>dec_attended</code> = seaco_decoder(热词向量, decoder_hidden)
+        <br><code>merged</code> = _merge(cif_attended, dec_attended)
+        <br><code>dha_pred = log_softmax(hotword_output_layer(merged))</code> <span class="dim">[B, N, Vocab]</span>
+      </li>
+    </ol>
+    最终融合：<code>merged_pred = decoder_pred × mask + dha_pred × (1 - mask)</code>
+    <br><span class="dim">mask 由 dha_pred 中的 blank token (id=8377) 决定，seaco_weight 控制融合比例（默认 0.54）</span>
+    <div class="file-ref">📄 asr/funasr/models/e2e_asr_paraformer.py : 1982</div>
+  </div>
+</div>
+
+<div class="arrow"><span class="arrow-label">merged_pred [B, N_token, Vocab_size] — 融合热词偏置后的log概率分布（每个token在词表上的得分）</span></div>
+
+<div class="node phase-model" style="border-style:dashed;">
+  <div class="node-title"><span class="tag">时间戳</span> calc_predictor_timestamp()（可选）</div>
+  <div class="node-body">
+    当 <code>eable_time_stamp = True</code> 时执行：
+    <ul>
+      <li>对编码器输出做上采样（×3），重新计算细粒度的 CIF 发射概率 <code>us_alphas</code> 和峰值位置 <code>us_peaks</code></li>
+      <li>后续在 Token 后处理阶段，通过 <code>ts_prediction_lfr6_standard(us_alphas, us_peaks, token)</code> 将每个 token 对齐到音频时间轴</li>
+    </ul>
+    <span class="dim">本项目 eable_time_stamp=False（use_timestamp 未配置），此步跳过。若启用，输出格式为 <code>"0 200 你 200 400 好"</code>（起止时间 ms + token）</span>
+    <div class="file-ref">📄 asr/funasr/models/e2e_asr_paraformer.py : calc_predictor_timestamp (BiCifParaformer)</div>
+  </div>
+</div>
+
+<div class="arrow"><span class="arrow-label"></span></div>
+
+<!-- ========== 阶段5: 解码搜索 ========== -->
+<div class="section-label">阶段五 · 解码搜索</div>
+
+<div class="node phase-model">
+  <div class="node-title"><span class="tag">搜索</span> 解码策略选择（三选一）</div>
+  <div class="node-body">
+    根据配置走不同解码路径：
+  </div>
+</div>
+
+<div class="arrow"><span class="arrow-label"></span></div>
+
+<div class="branch">
+  <div class="node phase-model" style="border-color:#6366f1;">
+    <div class="node-title" style="color:#818cf8;"><span class="tag" style="background:#4338ca;">路径A</span> BeamSearch</div>
+    <div class="node-body">
+      当 <code>beam_search is not None</code>（ctc_weight≠0 或使用 LM）：
+      <br>CTC-Attention 联合 BeamSearch
+      <br>beam_size=10, ctc_weight=0.5
+      <br><span class="dim">本项目配置下实际走此路径</span>
+    </div>
+  </div>
+  <div class="node phase-model" style="border-color:#6366f1;">
+    <div class="node-title" style="color:#818cf8;"><span class="tag" style="background:#4338ca;">路径B</span> FST 热词搜索</div>
+    <div class="node-body">
+      当 <code>eable_fst_search=True</code>：
+      <br>构建 ContextGraph
+      <br>CTC prefix beam search
+      <br>+ 上下文热词打分
+      <br><span class="dim">本项目 eable_fst_search=False，不走此路径</span>
+    </div>
+  </div>
+  <div class="node phase-model" style="border-color:#6366f1;">
+    <div class="node-title" style="color:#818cf8;"><span class="tag" style="background:#4338ca;">路径C</span> 贪心解码</div>
+    <div class="node-body">
+      当以上均不满足：
+      <br><code>argmax(am_scores)</code>
+      <br>直接取每帧最大概率 token
+      <br><span class="dim">最快但准确率最低</span>
+    </div>
+  </div>
+</div>
+
+<div class="arrow"><span class="arrow-label">nbest_hyps: List[Hypothesis] — N-best候选序列列表（每个含token ID序列和得分）</span></div>
+
+<div class="node phase-post">
+  <div class="node-title"><span class="tag">Token</span> Token 后处理</div>
+  <div class="node-body">
+    <ul>
+      <li>从 hypothesis 中提取 token 序列，去除 <code>sos</code>/<code>eos</code></li>
+      <li>过滤 blank (id=0)、eos (id=2)、unk (id=1)</li>
+      <li><code>TokenIDConverter.ids2tokens()</code>：token ID → 字符/子词 token</li>
+    </ul>
+    输出：<code>token</code> = <code>["你", "好", "萤", "石", ...]</code>
+  </div>
+</div>
+
+<div class="arrow"><span class="arrow-label">results = [(token, hyp), ...] — token字符列表 + 假设对象（如 ["你","好","萤","石"]）</span></div>
+
+<!-- ========== 阶段6: 文本后处理 ========== -->
+<div class="section-label">阶段六 · 文本后处理（_forward 闭包内）</div>
+
+<div class="node phase-post">
+  <div class="node-title"><span class="tag">拼接</span> sentence_postprocess(token)</div>
+  <div class="node-body">
+    将 token 列表拼接为完整文本字符串：
+    <ul>
+      <li>中文 token 直接拼接（无空格）</li>
+      <li>英文 token 用空格连接</li>
+      <li>处理特殊符号（@@、▁ 等子词标记）</li>
+    </ul>
+    输出：<code>text_postprocessed</code> = <code>"你好萤石"</code>
+    <div class="file-ref">📄 asr/funasr/utils/postprocess_utils.py</div>
+  </div>
+</div>
+
+<div class="arrow"><span class="arrow-label"></span></div>
+
+<div class="branch">
+  <div class="node phase-post">
+    <div class="node-title"><span class="tag">ITN</span> 逆文本正则化</div>
+    <div class="node-body">
+      <code>InverseNormalizer.normalize()</code>
+      <br>将口语化数字/日期转为书面形式
+      <br>例：<code>"二零二四年"</code> → <code>"2024年"</code>
+      <br><span class="dim">本项目 is_use_itn=False → 跳过此步</span>
+    </div>
+  </div>
+  <div class="node phase-post">
+    <div class="node-title"><span class="tag">标点</span> 标点恢复</div>
+    <div class="node-body">
+      <code>Text2Punc(text, split_size=20)</code>
+      <br>为无标点文本添加逗号、句号等
+      <br><span class="dim">本项目 punc_model_file=None → 跳过此步</span>
+    </div>
+  </div>
+</div>
+
+<div class="arrow"><span class="arrow-label">asr_result_list = [{'key': 'id1', 'value': '你好萤石'}] — 最终识别结果字典列表</span></div>
+
+<!-- ========== 阶段7: 响应 ========== -->
+<div class="section-label">阶段七 · 响应封装</div>
+
+<div class="node phase-out">
+  <div class="node-title"><span class="tag">返回</span> 构建响应 — 回到 EzvizModelBackend.forward()</div>
+  <div class="node-body">
+    <ul>
+      <li>检查 <code>asr_results_text[0]['value']</code> 是否非空</li>
+      <li>将识别文本转小写：<code>.lower()</code></li>
+      <li>封装为 <code>Completion(modal="text", type="raw", data="你好萤石")</code></li>
+      <li>写入 <code>rsp_msg.completion</code> 列表</li>
+      <li>返回 <code>rsp_msg</code> → MS_Manager 框架序列化为 JSON 响应</li>
+    </ul>
+  </div>
+</div>
+
+<div class="arrow"><span class="arrow-label"></span></div>
+
+<div class="node phase-out" style="text-align:center; border-style:dashed;">
+  <div class="node-title" style="justify-content:center;"><span class="tag">HTTP</span> JSON Response → 客户端</div>
+  <div class="node-body" style="text-align:left;">
+    <code>{"completion": [{"modal": "text", "type": "raw", "data": "你好萤石"}]}</code>
+  </div>
+</div>
+
+</div>
+
+<div style="max-width:820px; margin:50px auto 0; padding:20px; background:#1e293b; border-radius:10px; border:1px solid #334155;">
+  <div style="font-size:14px; font-weight:700; color:#94a3b8; margin-bottom:12px;">📌 本项目实际配置下的简化路径</div>
+  <div style="font-size:12.5px; color:#64748b; line-height:1.8;">
+    由于 <code>punc_model_file=None</code>、<code>is_use_itn=False</code>、<code>eable_fst_search=False</code>，实际执行路径为：
+    <br><br>
+    <span style="color:#e2e8f0;">
+    音频 base64 解码 → PCM bytes → float32 waveform
+    <br>→ FBank (80维) → LFR (560维) → CMVN 归一化
+    <br>→ SANM Encoder → CIF Predictor (预测 token 数)
+    <br>→ SeACo Decoder (基础解码 + LSTM 热词编码 + ASF Top50 过滤 + SeACo 偏置融合)
+    <br>→ CTC-Attention BeamSearch (beam=10, ctc_weight=0.5)
+    <br>→ Token ID → 字符 → sentence_postprocess 拼接
+    <br>→ 文本小写 → JSON 响应
+    </span>
+  </div>
+</div>
+
+<!-- ===== 数据流时序图 ===== -->
+<div style="max-width:820px; margin:50px auto 0; padding:20px; background:#1e293b; border-radius:10px; border:1px solid #334155;">
+  <div style="font-size:14px; font-weight:700; color:#94a3b8; margin-bottom:14px;">📊 非流式 ASR 数据流时序图</div>
+  <pre style="font-size:11.5px; color:#94a3b8; line-height:1.6; font-family:'Cascadia Code','Fira Code',monospace; overflow-x:auto;">
+┌────────┐          ┌────────────┐          ┌──────────────────┐          ┌───────────────┐
+│ 客户端  │          │ ms_manager │          │EzvizModelBackend │          │ SeacoParaformer│
+└───┬────┘          └─────┬──────┘          └────────┬─────────┘          └───────┬───────┘
+    │                     │                          │                            │
+    │  POST /process      │                          │                            │
+    │  (完整音频 base64)   │                          │                            │
+    │────────────────────▶│                          │                            │
+    │                     │                          │                            │
+    │                     │  forward(rqs_info)       │                            │
+    │                     │─────────────────────────▶│                            │
+    │                     │                          │                            │
+    │                     │                          │── 入参校验                  │
+    │                     │                          │── 热词合并                  │
+    │                     │                          │                            │
+    │                     │                          │── base64_decode()           │
+    │                     │                          │   或 torchaudio.load()      │
+    │                     │                          │   → PCM/waveform            │
+    │                     │                          │                            │
+    │                     │                          │  inference_offline()        │
+    │                     │                          │───────────────────────────▶│
+    │                     │                          │                            │
+    │                     │                          │                            │── WavFrontend
+    │                     │                          │                            │   FBank→LFR→CMVN
+    │                     │                          │                            │
+    │                     │                          │                            │── SANM Encoder
+    │                     │                          │                            │
+    │                     │                          │                            │── CIF Predictor
+    │                     │                          │                            │   (预测token数)
+    │                     │                          │                            │
+    │                     │                          │                            │── SeACo Decoder
+    │                     │                          │                            │   + 热词增强
+    │                     │                          │                            │
+    │                     │                          │                            │── BeamSearch
+    │                     │                          │                            │   (beam=10)
+    │                     │                          │                            │
+    │                     │                          │                            │── Token后处理
+    │                     │                          │                            │   IDs→字符→拼接
+    │                     │                          │                            │
+    │                     │                          │  asr_results_text          │
+    │                     │                          │◀───────────────────────────│
+    │                     │                          │                            │
+    │                     │                          │── .lower() 转小写          │
+    │                     │                          │── 封装 Completion          │
+    │                     │                          │                            │
+    │                     │   rsp_msg                │                            │
+    │                     │◀─────────────────────────│                            │
+    │                     │                          │                            │
+    │  JSON Response      │                          │                            │
+    │  {"completion":     │                          │                            │
+    │   [{"data":"你好"}]}│                          │                            │
+    │◀────────────────────│                          │                            │
+    │                     │                          │                            │
+
+<span style="color:#fbbf24;">耗时分布（典型 5s 音频）：</span>
+<span style="color:#64748b;">├── base64 解码：        ~1ms</span>
+<span style="color:#64748b;">├── FBank+LFR+CMVN：     ~5ms</span>
+<span style="color:#64748b;">├── SANM Encoder：       ~30ms</span>
+<span style="color:#64748b;">├── CIF Predictor：      ~5ms</span>
+<span style="color:#64748b;">├── SeACo Decoder+热词： ~40ms</span>
+<span style="color:#64748b;">├── BeamSearch：         ~20ms</span>
+<span style="color:#64748b;">└── Token 后处理：       ~1ms</span>
+<span style="color:#64748b;">    总计：               ~100ms（GPU推理）</span>
+  </pre>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,96 @@
+<mxfile host="65bd71144e">
+    <diagram name="Agent内部架构" id="agent">
+        <mxGraphModel dx="957" dy="726" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1000" pageHeight="680" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="2" value="" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=10;dashed=0" parent="1" vertex="1">
+                    <mxGeometry x="30" y="10" width="940" height="650" as="geometry"/>
+                </mxCell>
+                <mxCell id="2t" value="Agent 决策引擎" style="text;fontSize=12;fontStyle=1;fontColor=#000000;align=center" parent="1" vertex="1">
+                    <mxGeometry x="380" y="15" width="240" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="10" value="① Prompt Builder（动态提示词构建器）" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=10;fontStyle=1;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="60" y="50" width="880" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="11" value="组装内容：身份定义 + ASR领域知识 + 实验树摘要 + 紧凑记忆 + Skill索引 + 约束规则" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=8;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="60" y="78" width="880" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="20" value="② LLM 推理核心（调用外部LLM API获取决策）" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=10;fontStyle=1;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="200" y="118" width="600" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="110" style="edgeStyle=none;html=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#000000;" edge="1" parent="1" source="30" target="40">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="111" style="edgeStyle=none;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#000000;" edge="1" parent="1" source="30" target="50">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="113" style="edgeStyle=none;html=1;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#000000;" edge="1" parent="1" source="30" target="60">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="30" value="③ Tool/Skill Dispatcher（能力调度器：解析调用指令，路由到Tool层或Skill层）" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=10;fontStyle=1;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="120" y="166" width="760" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="40" value="Tool Registry（通用工具注册表）" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=9;fontStyle=1;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="60" y="220" width="250" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="41" value="read_file&#10;write_file&#10;run_command&#10;edit_yaml&#10;query_database" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=8;fontColor=#000000;align=left;spacingLeft=8" parent="1" vertex="1">
+                    <mxGeometry x="60" y="244" width="250" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="50" value="Skill Registry（领域技能注册表）" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=9;fontStyle=1;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="340" y="220" width="310" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="51" value="prepare_data | quality_scan | split_dataset&#10;augment_data | merge_sources | generate_manifest&#10;train_model | evaluate_model&#10;analyze_results | edit_config" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=8;fontColor=#000000;align=left;spacingLeft=8" parent="1" vertex="1">
+                    <mxGeometry x="340" y="244" width="310" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="60" value="Memory 层（记忆系统，文件存储）" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=9;fontStyle=1;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="680" y="220" width="260" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="61" value="实验树 (experiment_tree.json)&#10;紧凑记忆 (MEMORY_LOG.md)&#10;死胡同 (DEAD_ENDS.md)&#10;洞察 (INSIGHTS.md)" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=8;fontColor=#000000;align=left;spacingLeft=8" parent="1" vertex="1">
+                    <mxGeometry x="680" y="244" width="260" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="70" value="④ Context Engine（上下文管理：Token计数 | 历史压缩 | 记忆compact | 窗口管理）" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=9;fontStyle=1;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="60" y="340" width="580" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="80" value="⑤ Iteration Budget（迭代预算控制）" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=9;fontStyle=1;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="60" y="390" width="280" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="81" value="max_rounds | max_gpu_hours | no_improve_stop" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=8;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="60" y="414" width="280" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="90" value="⑥ Trajectory Logger（轨迹记录器）" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=9;fontStyle=1;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="370" y="390" width="280" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="91" value="每轮 THINK / EXECUTE / REFLECT → Trace Span → 数据库" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=8;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="370" y="414" width="280" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="100" value="THINK" style="rounded=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=10;fontStyle=1;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="700" y="370" width="80" height="32" as="geometry"/>
+                </mxCell>
+                <mxCell id="101" value="EXECUTE" style="rounded=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=10;fontStyle=1;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="820" y="370" width="90" height="32" as="geometry"/>
+                </mxCell>
+                <mxCell id="102" value="REFLECT" style="rounded=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=10;fontStyle=1;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="760" y="430" width="90" height="32" as="geometry"/>
+                </mxCell>
+                <mxCell id="e10" style="strokeColor=#333333;curved=1" parent="1" source="100" target="101" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e11" style="strokeColor=#333333;curved=1" parent="1" source="101" target="102" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e12" style="strokeColor=#333333;curved=1" parent="1" source="102" target="100" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="ea" style="strokeColor=#333333" parent="1" target="20" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="500" y="100" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="eb" style="strokeColor=#333333" parent="1" source="20" target="30" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

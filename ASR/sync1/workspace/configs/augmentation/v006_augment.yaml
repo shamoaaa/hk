@@ -1,0 +1,29 @@
+enabled: true
+require_augmentation: true
+noise_dir: data/musan
+download_musan: false
+augmented_dir: data/augmented
+strategies:
+- type: babble
+  snr_range:
+  - 5
+  - 20
+  probability: 0.4
+  num_speakers:
+  - 1
+  - 3
+- type: music
+  snr_range:
+  - 5
+  - 25
+  probability: 0.2
+- type: noise
+  snr_range:
+  - 5
+  - 25
+  probability: 0.2
+- type: reverb
+  probability: 0.15
+  rt60_range:
+  - 0.1
+  - 1.0

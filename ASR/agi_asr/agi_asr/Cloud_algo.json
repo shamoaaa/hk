@@ -1,0 +1,5 @@
+{
+    "port": 25040,
+    "stream_suffix": "/stream_result",
+    "interval": 600
+}

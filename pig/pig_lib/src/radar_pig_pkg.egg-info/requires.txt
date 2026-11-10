@@ -1,0 +1,9 @@
+pandas
+numpy
+dtaidistance
+h5py
+matplotlib
+oss2
+scikit_learn
+scipy
+xgboost

@@ -1,0 +1,25 @@
+stateDiagram-v2
+    [*] --> 加载上下文
+    加载上下文: 获取紧凑记忆 + 实验树状态 + 最新评估结果
+    加载上下文 --> THINK
+
+    THINK: THINK 分析瓶颈，确定优化方向
+    THINK --> 搜索策略选择
+
+    state 搜索策略选择 <<choice>>
+    搜索策略选择 --> EXECUTE : Draft 新方向
+    搜索策略选择 --> EXECUTE : Improve 当前最优
+
+    EXECUTE: EXECUTE 调用Skill执行（增强 / 训练 / 评估等）
+    EXECUTE --> 等待执行结果
+    等待执行结果 --> REFLECT
+
+    REFLECT: REFLECT 分析结果，对比基线，记录经验到记忆系统
+    REFLECT --> 继续优化
+
+    state 继续优化 <<choice>>
+    继续优化 --> THINK : 是
+    继续优化 --> 生成总结 : 否
+
+    生成总结: 生成优化总结报告，存入数据库
+    生成总结 --> [*]

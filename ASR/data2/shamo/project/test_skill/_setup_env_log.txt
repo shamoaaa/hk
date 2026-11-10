@@ -1,0 +1,50 @@
+connected
+
+=== 基础环境 ===
+$ cat /etc/os-release | head -5
+  rc=0
+  stdout: PRETTY_NAME="Ubuntu 22.04.5 LTS"
+NAME="Ubuntu"
+VERSION_ID="22.04"
+VERSION="22.04.5 LTS (Jammy Jellyfish)"
+VERSION_CODENAME=jammy
+
+$ python3 --version 2>&1 || python --version 2>&1
+  rc=0
+  stdout: Python 3.10.12
+
+$ pip3 --version 2>&1 || pip --version 2>&1
+  rc=127
+  stdout: bash: line 1: pip3: command not found
+bash: line 1: pip: command not found
+
+$ which conda 2>&1
+  rc=1
+  stdout: 
+$ nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -1
+  rc=0
+  stdout: 580.159.03
+
+$ nvcc --version 2>&1 | grep release
+  rc=1
+  stdout: 
+$ python3 -c 'import torch; print(torch.__version__, torch.cuda.is_available())' 2>&1
+  rc=1
+  stdout: Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+ModuleNotFoundError: No module named 'torch'
+
+
+=== 磁盘空间 ===
+$ df -h /data
+  rc=0
+  stdout: Filesystem      Size  Used Avail Use% Mounted on
+overlay         879G  231G  604G  28% /
+
+
+=== 已有 Python 包 ===
+$ pip3 list 2>/dev/null | grep -i -E 'torch|funasr|torchaudio|modelscope' || pip list 2>/dev/null | grep -i -E 'torch|funasr|torchaudio|modelscope'
+  rc=1
+  stdout: 
+
+done

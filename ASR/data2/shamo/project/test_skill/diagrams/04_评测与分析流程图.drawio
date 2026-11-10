@@ -1,0 +1,72 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="评测与分析" id="eval">
+    <mxGraphModel dx="900" dy="580" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="550">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <!-- evaluate_model -->
+        <mxCell id="10" value="Agent 调用 evaluate_model 技能" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=10;fontStyle=1;fontColor=#000000" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="280" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="11" value="加载模型checkpoint" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=9;fontColor=#000000" vertex="1" parent="1">
+          <mxGeometry x="60" y="60" width="240" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="12" value="对测试集执行推理" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=9;fontColor=#000000" vertex="1" parent="1">
+          <mxGeometry x="60" y="92" width="240" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="13" value="规则型评估器计算指标&#10;（CER / 指令召回率 / Stripped_CER）" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=9;fontColor=#000000" vertex="1" parent="1">
+          <mxGeometry x="60" y="124" width="240" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="14" value="生成badcase清单（CER &gt; 阈值的样本）" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=9;fontColor=#000000" vertex="1" parent="1">
+          <mxGeometry x="60" y="166" width="240" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="15" value="按设备/场景维度聚合统计" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=9;fontColor=#000000" vertex="1" parent="1">
+          <mxGeometry x="60" y="198" width="240" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="16" value="结果持久化到数据库" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=9;fontColor=#000000" vertex="1" parent="1">
+          <mxGeometry x="60" y="230" width="240" height="24" as="geometry" />
+        </mxCell>
+        <!-- 箭头 -->
+        <mxCell id="ea" style="strokeColor=#333333" edge="1" source="11" target="12" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="eb" style="strokeColor=#333333" edge="1" source="12" target="13" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ec" style="strokeColor=#333333" edge="1" source="13" target="14" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ed" style="strokeColor=#333333" edge="1" source="14" target="15" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ee" style="strokeColor=#333333" edge="1" source="15" target="16" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <!-- analyze_results -->
+        <mxCell id="20" value="Agent 调用 analyze_results 技能" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=10;fontStyle=1;fontColor=#000000" vertex="1" parent="1">
+          <mxGeometry x="460" y="20" width="280" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="21" value="读取badcase清单" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=9;fontColor=#000000" vertex="1" parent="1">
+          <mxGeometry x="480" y="60" width="240" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="22" value="统计错误类型分布（替换/插入/删除）" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=9;fontColor=#000000" vertex="1" parent="1">
+          <mxGeometry x="480" y="92" width="240" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="23" value="提取Top-N混淆对" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=9;fontColor=#000000" vertex="1" parent="1">
+          <mxGeometry x="480" y="124" width="240" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="24" value="LLM型评估器：对badcase做语义归因分析" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=9;fontColor=#000000" vertex="1" parent="1">
+          <mxGeometry x="480" y="156" width="240" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="25" value="按设备/场景定位薄弱环节" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=9;fontColor=#000000" vertex="1" parent="1">
+          <mxGeometry x="480" y="192" width="240" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="26" value="生成结构化分析报告，持久化到数据库" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=9;fontColor=#000000" vertex="1" parent="1">
+          <mxGeometry x="480" y="224" width="240" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="fa" style="strokeColor=#333333" edge="1" source="21" target="22" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="fb" style="strokeColor=#333333" edge="1" source="22" target="23" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="fc" style="strokeColor=#333333" edge="1" source="23" target="24" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="fd" style="strokeColor=#333333" edge="1" source="24" target="25" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="fe" style="strokeColor=#333333" edge="1" source="25" target="26" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <!-- 中间连线 -->
+        <mxCell id="mid" value="" style="strokeColor=#333333;dashed=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5" edge="1" source="16" target="20" parent="1"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="380" y="242" /><mxPoint x="380" y="34" /></Array></mxGeometry></mxCell>
+        <!-- 底部 -->
+        <mxCell id="40" value="Agent REFLECT 阶段：读取分析报告 → 决定下一步优化方向" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=10;fontStyle=1;fontColor=#000000" vertex="1" parent="1">
+          <mxGeometry x="200" y="290" width="420" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ga" style="strokeColor=#333333" edge="1" source="26" target="40" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

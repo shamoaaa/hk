@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "trials": [
+    {
+      "node_id": "node-1",
+      "date": "2026-07-09",
+      "params_changed": {},
+      "params_unchanged": {"lr": "1e-4", "batch_size": 64, "max_epoch": 5, "freeze": "hotword+seaco", "augment": "none"},
+      "result": {"cer": 0.1555, "stripped_cer": 0.1717, "recall": 0.7767},
+      "category": "training_recipe",
+      "reasoning": "首轮baseline，使用默认配置验证流水线端到端可用并建立CER参考点",
+      "verdict": "baseline"
+    },
+    {
+      "node_id": "node-2",
+      "date": "2026-07-09",
+      "params_changed": {"augment": "full_chain(reverb+speaker_mix+speed+EQ+volume+noise+clipping)", "data_size": "5000(2500+2500aug)", "gpu": "1"},
+      "params_unchanged": {"lr": "1e-4", "batch_size": 64, "max_epoch": 5, "freeze": "hotword+seaco"},
+      "result": {"cer": 0.1463, "stripped_cer": 0.1586, "recall": 0.7833},
+      "category": "augmentation",
+      "reasoning": "baseline显示插入错误30%来自背景人声干扰，使用speaker_mix为主的完整增强链让模型学会区分目标/干扰语音",
+      "verdict": "effective"
+    },
+    {
+      "node_id": "node-3",
+      "date": "2026-07-09",
+      "params_changed": {"speaker_mix_snr": "[0,15]", "speed_perturb": "[0.85,1.15]", "max_epoch": 10, "gpu": "3"},
+      "params_unchanged": {"lr": "1e-4", "batch_size": 64, "freeze": "hotword+seaco", "augment_factor": 1},
+      "result": {"cer": 0.1452, "stripped_cer": 0.1563, "recall": 0.8000},
+      "category": "augmentation",
+      "reasoning": "缩小SNR下界减少目标词被压制，扩大speed范围增加短词多样性，epoch翻倍让模型更充分学习",
+      "verdict": "effective"
+    },
+    {
+      "node_id": "node-4",
+      "date": "2026-07-10",
+      "params_changed": {"freeze": "hotword_only(解冻seaco_decoder)"},
+      "params_unchanged": {"lr": "1e-4", "batch_size": 64, "max_epoch": 10, "speaker_mix_snr": "[0,15]", "speed_perturb": "[0.85,1.15]"},
+      "result": {"cer": 0.1452, "stripped_cer": 0.1563, "recall": 0.8000},
+      "category": "training_recipe",
+      "reasoning": "解冻seaco_decoder让模型在指令词激活层面也能学习，期望降低删除错误",
+      "verdict": "ineffective"
+    },
+    {
+      "node_id": "node-5",
+      "date": "2026-07-10",
+      "params_changed": {"lr": "5e-5", "max_epoch": 15},
+      "params_unchanged": {"batch_size": 64, "freeze": "hotword+seaco", "speaker_mix_snr": "[0,15]", "speed_perturb": "[0.85,1.15]"},
+      "result": {"cer": 0.1490, "stripped_cer": 0.1649, "recall": 0.7800},
+      "category": "training_recipe",
+      "reasoning": "降低lr让模型更精细学习，epoch增加补偿收敛速度",
+      "verdict": "ineffective"
+    },
+    {
+      "node_id": "node-6",
+      "date": "2026-07-10",
+      "params_changed": {"chain": "reverb+speaker_mix+speed+EQ+volume(去clipping+noise)", "gaussian_noise": "disabled", "clipping": "disabled"},
+      "params_unchanged": {"lr": "1e-4", "batch_size": 64, "max_epoch": 10, "freeze": "hotword+seaco", "speaker_mix_snr": "[0,15]", "speed_perturb": "[0.85,1.15]"},
+      "result": {"cer": 0.1360, "stripped_cer": 0.1495, "recall": 0.7967},
+      "category": "augmentation",
+      "reasoning": "去掉clipping和gaussian_noise减少非核心失真，让模型更专注学习speaker_mix的目标/干扰区分",
+      "verdict": "effective"
+    }
+  ]
+}

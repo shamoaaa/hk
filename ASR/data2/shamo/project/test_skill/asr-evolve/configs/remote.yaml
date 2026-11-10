@@ -1,0 +1,24 @@
+# 远程 GPU 服务器配置
+remote:
+  host: 10.6.217.118
+  port: 20028
+  username: root
+  password: "123456"
+  key_file: ""
+  workspace: /data/shamo/project/asr
+  timeout: 30
+
+training:
+  gpus: 1
+  gpu_type: NVIDIA GeForce RTX 4090 D
+  distributed: false
+  torchrun_nproc: 1
+  # FunASR 是本地源码包，通过 PYTHONPATH 引用（非 pip 安装）
+  funasr_path: /data/shamo/project/asr/FunASR
+  model_dir: /data/shamo/project/asr/models/iic/speech_seaco_paraformer_large_asr_nat-zh-cn-16k-common-vocab8404-pytorch
+  output_dir: /data/shamo/project/asr/output
+
+inference:
+  # 推理脚本路径（服务器端）
+  decode_script: /data/shamo/project/asr/scripts/decode.sh
+  results_dir: /data/shamo/project/asr/results

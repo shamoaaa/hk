@@ -1,0 +1,20 @@
+{
+  "model_dir": "iic/speech_seaco_paraformer_large_asr_nat-zh-cn-16k-common-vocab8404-pytorch",
+  "num_samples": 5,
+  "cer": 0.0,
+  "wer": 0.0,
+  "scene_metrics": [
+    {
+      "scene_type": "unknown",
+      "cer": 0.0,
+      "wer": 0.0,
+      "sample_count": 5
+    }
+  ],
+  "error_type_distribution": {
+    "substitution": 0,
+    "insertion": 0,
+    "deletion": 0
+  },
+  "tag": "verify_fix"
+}

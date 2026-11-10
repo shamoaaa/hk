@@ -1,0 +1,60 @@
+@startuml
+skinparam defaultFontName "Microsoft YaHei"
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam linetype ortho
+skinparam rectangle {
+  BackgroundColor #F0F0F0
+  BorderColor #333333
+}
+skinparam component {
+  BackgroundColor #FFFFFF
+  BorderColor #333333
+}
+
+rectangle "用户层（浏览器）" as User
+
+rectangle "Web 管理控制台（Vue.js）" as Web {
+  component "项目管理" as W1
+  component "数据管理" as W2
+  component "Agent交互" as W3
+  component "评测分析" as W4
+  component "Trace视图" as W5
+  component "实验看板" as W6
+}
+
+rectangle "RESTful API 服务层（FastAPI）" as API {
+  component "项目接口 | 数据接口 | 热词接口\nAgent接口 | Trace接口 | 版本接口 | 认证接口" as APIs
+}
+
+rectangle "数据库持久化层（MySQL + Redis）" as DB {
+  component "实验记录 | 版本管理 | 评测结果\nTrace链路 | 用户权限" as DBItems
+}
+
+rectangle "Agent 决策引擎（每用户独立实例）" as AgentEngine {
+  component "Prompt Builder | LLM推理核心 | Tool/Skill Dispatcher\nContext Engine | Iteration Budget | Trajectory Logger" as AgentParts
+}
+
+rectangle "通用工具层（Tool）" as Tool {
+  component "read_file | write_file | run_cmd\nedit_yaml | query_db" as Tools
+}
+
+rectangle "领域技能层（Skill）— 10个ASR处理技能" as Skill {
+  component "prepare | quality | split | augment | merge\nmanifest | train | eval | analyze | edit_config" as Skills
+}
+
+rectangle "远程训练环境适配层" as Adapt {
+  component "RemoteExecutor（SSH） | TrainingEngine（健康检查）\nEvalEngine（推理+指标计算）" as Adapters
+}
+
+rectangle "远程 GPU 训练集群" as GPU
+
+User --> Web
+Web --> API
+API --> DB
+API --> AgentEngine
+AgentEngine --> Tool
+AgentEngine --> Skill
+Skill --> Adapt
+Adapt --> GPU
+@enduml

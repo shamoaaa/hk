@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智能音箱多说话人场景 - 数据增强流程</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, "Microsoft YaHei", sans-serif; background: #f0f2f5; padding: 30px; color: #333; }
+  h1 { text-align: center; font-size: 22px; margin-bottom: 8px; color: #1a1a2e; }
+  .subtitle { text-align: center; font-size: 13px; color: #888; margin-bottom: 30px; }
+  .container { max-width: 900px; margin: 0 auto; }
+
+  /* 全局信息 */
+  .global-info { background: #fff; border-radius: 10px; padding: 18px 24px; margin-bottom: 28px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08); display: flex; gap: 40px; flex-wrap: wrap; }
+  .global-info .item { font-size: 13px; }
+  .global-info .label { color: #888; }
+  .global-info .value { font-weight: 600; color: #1a1a2e; margin-left: 6px; }
+
+  /* 流程图 */
+  .flow { display: flex; flex-direction: column; align-items: center; gap: 0; }
+
+  /* 节点 */
+  .node { background: #fff; border-radius: 12px; padding: 20px 28px; width: 100%;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 4px solid #ccc; position: relative; }
+  .node.enabled { border-left-color: #4CAF50; }
+  .node.disabled { border-left-color: #ddd; opacity: 0.5; }
+  .node.sub { background: #f8faf8; border-left-color: #81C784; margin-left: 40px; width: calc(100% - 40px); }
+
+  .node-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .step-num { background: #4CAF50; color: #fff; border-radius: 50%; width: 26px; height: 26px;
+    display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+  .node.disabled .step-num { background: #ccc; }
+  .node.sub .step-num { background: #81C784; font-size: 11px; width: 22px; height: 22px; }
+  .node-title { font-size: 15px; font-weight: 600; color: #1a1a2e; }
+  .node-desc { font-size: 12.5px; color: #666; margin-bottom: 10px; }
+  .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px;
+    margin-left: 8px; font-weight: 500; }
+  .badge.on { background: #E8F5E9; color: #2E7D32; }
+  .badge.off { background: #FFEBEE; color: #C62828; }
+  .badge.normal { background: #E3F2FD; color: #1565C0; }
+
+  /* 参数表 */
+  .params { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px 20px; }
+  .param { font-size: 12px; display: flex; gap: 6px; }
+  .param .k { color: #999; white-space: nowrap; }
+  .param .v { color: #333; font-weight: 500; font-family: "Cascadia Code", Consolas, monospace; }
+
+  /* 箭头 */
+  .arrow { display: flex; flex-direction: column; align-items: center; height: 32px; justify-content: center; }
+  .arrow-line { width: 2px; height: 16px; background: #bbb; }
+  .arrow-head { width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent;
+    border-top: 8px solid #bbb; }
+
+  /* 输入输出 */
+  .io-node { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; border-left: none;
+    text-align: center; border-radius: 24px; padding: 14px 28px; }
+  .io-node .node-title { color: #fff; font-size: 14px; }
+  .io-node .node-desc { color: rgba(255,255,255,0.8); }
+
+  /* 子流程框 */
+  .sub-group { border: 2px dashed #A5D6A7; border-radius: 12px; padding: 16px; margin: 0;
+    width: 100%; background: rgba(76,175,80,0.03); }
+  .sub-group-title { font-size: 12px; color: #4CAF50; font-weight: 600; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 6px; }
+
+  /* 场景说明 */
+  .scene-note { background: #FFFDE7; border: 1px solid #FFF9C4; border-radius: 8px; padding: 12px 16px;
+    font-size: 12px; color: #F57F17; margin-bottom: 24px; line-height: 1.6; }
+  .scene-note strong { color: #E65100; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🔊 智能音箱多说话人场景 · 数据增强流程</h1>
+  <p class="subtitle">augment_config_speaker_multi.yaml · SNR 采样使用均匀分布 U[low, high]</p>
+
+  <div class="scene-note">
+    <strong>场景建模：</strong>主说话人（0.5-3米）对音箱说话，周围有 1 个背景说话人在不同距离交谈。
+    每个背景人有独立的距离（混响强度）、音色（pitch）、音量（SNR）。<br>
+    <strong>信号路径：</strong>背景人声 → 独立 pitch/reverb/lowpass → 混入 ｜ 主说话人 → 房间混响 → 音箱麦克风频响 → 环境底噪 → ADC
+  </div>
+
+  <div class="global-info">
+    <div class="item"><span class="label">随机种子</span><span class="value">42</span></div>
+    <div class="item"><span class="label">增强倍数</span><span class="value">×1</span></div>
+    <div class="item"><span class="label">工作进程</span><span class="value">8</span></div>
+    <div class="item"><span class="label">断点续跑</span><span class="value">关闭</span></div>
+    <div class="item"><span class="label">启用策略</span><span class="value">8 / 16</span></div>
+  </div>
+
+  <div class="flow">
+
+    <!-- 输入 -->
+    <div class="node io-node">
+      <div class="node-title">📂 干净近场录音</div>
+      <div class="node-desc">输入目录（干净语音）</div>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+    <!-- Step 1: reverb -->
+    <div class="node enabled">
+      <div class="node-header">
+        <div class="step-num">1</div>
+        <div class="node-title">reverb · 主说话人房间混响</div>
+        <span class="badge on">启用</span>
+      </div>
+      <div class="node-desc">合成 RIR 卷积模拟主说话人 0.5-2.5 米的房间声学（在混入背景声之前，避免双重混响）</div>
+      <div class="params">
+        <div class="param"><span class="k">RT60</span><span class="v">[0.08, 0.1] s</span></div>
+      </div>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+    <!-- Step 2: speaker_mix -->
+    <div class="node enabled">
+      <div class="node-header">
+        <div class="step-num">2</div>
+        <div class="node-title">speaker_mix · 多说话人混合</div>
+        <span class="badge on">启用</span>
+        <span class="badge normal">距离关联</span>
+      </div>
+      <div class="node-desc">混入 1 个背景说话人，独立参数模拟不同距离/音色/音量；距离因子 t 驱动 SNR/RT60/lowpass 联动</div>
+      <div class="params">
+        <div class="param"><span class="k">最大背景人数</span><span class="v">1</span></div>
+        <div class="param"><span class="k">SNR</span><span class="v">[5, 15] dB</span></div>
+        <div class="param"><span class="k">逐人独立SNR</span><span class="v">✅</span></div>
+        <div class="param"><span class="k">随机插入</span><span class="v">✅</span></div>
+        <div class="param"><span class="k">重叠模式</span><span class="v">auto（随机选择）</span></div>
+        <div class="param"><span class="k">最小重叠比例</span><span class="v">80%</span></div>
+        <div class="param"><span class="k">距离关联</span><span class="v">✅ (t=0近 → t=1远)</span></div>
+      </div>
+
+      <div style="margin-top: 14px;">
+        <div class="sub-group">
+          <div class="sub-group-title">🎭 每条背景人声的独立预处理（距离因子 t 联动）</div>
+          <div class="flow" style="gap: 8px; align-items: stretch;">
+
+            <div class="node sub enabled">
+              <div class="node-header">
+                <div class="step-num">a</div>
+                <div class="node-title">bg_pitch_shift · 音调偏移</div>
+                <span class="badge on">启用</span>
+              </div>
+              <div class="node-desc">模拟不同音色（男/女/老/幼）</div>
+              <div class="params">
+                <div class="param"><span class="k">半音范围</span><span class="v">[-2, +2]</span></div>
+              </div>
+            </div>
+
+            <div class="node sub enabled">
+              <div class="node-header">
+                <div class="step-num">b</div>
+                <div class="node-title">bg_reverb · 独立混响</div>
+                <span class="badge on">启用</span>
+              </div>
+              <div class="node-desc">模拟不同距离的混响强度（1米~4米）</div>
+              <div class="params">
+                <div class="param"><span class="k">RT60</span><span class="v">[0.1, 0.15] s</span></div>
+              </div>
+            </div>
+
+            <div class="node sub enabled">
+              <div class="node-header">
+                <div class="step-num">c</div>
+                <div class="node-title">bg_lowpass · 独立低通滤波</div>
+                <span class="badge on">启用</span>
+              </div>
+              <div class="node-desc">模拟远距离高频衰减（4米~1米）</div>
+              <div class="params">
+                <div class="param"><span class="k">截止频率</span><span class="v">[6500, 7800] Hz</span></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+    <!-- Step 3: speed_perturb -->
+    <div class="node enabled">
+      <div class="node-header">
+        <div class="step-num">3</div>
+        <div class="node-title">speed_perturb · 语速扰动</div>
+        <span class="badge on">启用</span>
+      </div>
+      <div class="node-desc">主说话人语速多样性</div>
+      <div class="params">
+        <div class="param"><span class="k">速度因子</span><span class="v">[0.9, 1.1]</span></div>
+      </div>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+    <!-- Step 3.5: pitch_shift (不在chain中，但enabled，作为补充说明) -->
+    <!-- pitch_shift 启用但不在 chain 中，说明可能由引擎自动插入或作为独立处理 -->
+
+    <!-- Step 4: eq_random -->
+    <div class="node enabled">
+      <div class="node-header">
+        <div class="step-num">4</div>
+        <div class="node-title">eq_random · 音箱麦克风频响</div>
+        <span class="badge on">启用</span>
+      </div>
+      <div class="node-desc">随机 EQ 模拟音箱麦克风的频响染色</div>
+      <div class="params">
+        <div class="param"><span class="k">频段数</span><span class="v">6</span></div>
+        <div class="param"><span class="k">增益范围</span><span class="v">[-4, +4] dB</span></div>
+      </div>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+    <!-- Step 5: volume_perturb -->
+    <div class="node enabled">
+      <div class="node-header">
+        <div class="step-num">5</div>
+        <div class="node-title">volume_perturb · 距离/音量衰减</div>
+        <span class="badge on">启用</span>
+      </div>
+      <div class="node-desc">主说话人 0.5-2.5 米距离导致的音量变化</div>
+      <div class="params">
+        <div class="param"><span class="k">增益范围</span><span class="v">[-14, 0] dB</span></div>
+        <div class="param"><span class="k">物理含义</span><span class="v">0.5m≈0dB, 2.5m≈-14dB</span></div>
+      </div>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+    <!-- Step 6: gaussian_noise -->
+    <div class="node enabled">
+      <div class="node-header">
+        <div class="step-num">6</div>
+        <div class="node-title">gaussian_noise · 家庭环境底噪</div>
+        <span class="badge on">启用</span>
+      </div>
+      <div class="node-desc">轻微高斯白噪声模拟家庭环境底噪（很轻微）</div>
+      <div class="params">
+        <div class="param"><span class="k">SNR</span><span class="v">[35, 40] dB</span></div>
+      </div>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+    <!-- Step 7: clipping -->
+    <div class="node enabled">
+      <div class="node-header">
+        <div class="step-num">7</div>
+        <div class="node-title">clipping · 麦克风过载</div>
+        <span class="badge on">启用</span>
+      </div>
+      <div class="node-desc">偶发近场大声说话时的信号截断</div>
+      <div class="params">
+        <div class="param"><span class="k">削波阈值</span><span class="v">[0.6, 0.95]</span></div>
+      </div>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+    <!-- 峰值归一化 -->
+    <div class="node enabled" style="border-left-color: #FF9800;">
+      <div class="node-header">
+        <div class="step-num" style="background: #FF9800;">✓</div>
+        <div class="node-title">normalize_peak · 峰值归一化</div>
+      </div>
+      <div class="node-desc">防止削波，绝对值最大值 ≤ 1.0</div>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+    <!-- 输出 -->
+    <div class="node io-node">
+      <div class="node-title">💾 增强后音频 × 1</div>
+      <div class="node-desc">输出目录（增强语音）</div>
+    </div>
+
+  </div>
+
+  <!-- 未在 chain 中但已启用的策略 -->
+  <div style="margin-top: 32px; background: #fff; border-radius: 10px; padding: 18px 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.08);">
+    <h3 style="font-size: 14px; color: #1a1a2e; margin-bottom: 12px;">📋 已启用但未在 chain 中的策略</h3>
+    <div class="node enabled" style="margin-bottom: 0;">
+      <div class="node-header">
+        <div class="step-num" style="background: #FF9800;">⚠</div>
+        <div class="node-title">pitch_shift · 主说话人音调偏移</div>
+        <span class="badge on">启用</span>
+        <span class="badge normal">未在chain中</span>
+      </div>
+      <div class="node-desc">主说话人音调多样性（需手动加入 chain 才会生效）</div>
+      <div class="params">
+        <div class="param"><span class="k">半音范围</span><span class="v">[-1.5, +1.5]</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 已关闭的策略列表 -->
+  <div style="margin-top: 20px; background: #fff; border-radius: 10px; padding: 18px 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.08);">
+    <h3 style="font-size: 14px; color: #999; margin-bottom: 10px;">🚫 已关闭的策略（8 个）</h3>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px; color: #999;">
+      <span style="background: #f5f5f5; padding: 4px 10px; border-radius: 6px;">noise_from_file</span>
+      <span style="background: #f5f5f5; padding: 4px 10px; border-radius: 6px;">real_rir</span>
+      <span style="background: #f5f5f5; padding: 4px 10px; border-radius: 6px;">random_crop_pad</span>
+      <span style="background: #f5f5f5; padding: 4px 10px; border-radius: 6px;">time_stretch</span>
+      <span style="background: #f5f5f5; padding: 4px 10px; border-radius: 6px;">random_silence</span>
+      <span style="background: #f5f5f5; padding: 4px 10px; border-radius: 6px;">codec_simulate</span>
+      <span style="background: #f5f5f5; padding: 4px 10px; border-radius: 6px;">bandpass_filter</span>
+      <span style="background: #f5f5f5; padding: 4px 10px; border-radius: 6px;">concatenate</span>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

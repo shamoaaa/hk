@@ -1,0 +1,46 @@
+# 评估配置
+
+evaluation:
+  # 唤醒词变体列表（用于剥离计算 Stripped_CER）
+  wakewords:
+    - "你好萤石"
+    - "你好，萤石"
+    - "萤石"
+
+  # 测试集
+  test_sets:
+    - name: s10_test
+      path: /data/shamo/project/asr/data/s10_reflow/split/test
+      description: "萤石 S10 系列摄像头测试集"
+    - name: sp4_test
+      path: /data/shamo/project/asr/data/sp4_reflow/split/test
+      description: "萤石 SP4 系列摄像头测试集"
+    - name: aishell_test
+      path: /data/shamo/project/asr/data/aishell_small/split/test
+      description: "AISHELL 测试集（骨架验证）"
+
+  # 基线模型（每次评估强制对比）
+  baselines:
+    - name: seaco
+      description: "SeaCo-Paraformer 原始预训练模型"
+      checkpoint: /data/shamo/project/asr/models/seaco-paraformer/model.pt
+    - name: online
+      description: "当前线上部署版本"
+      checkpoint: /data/shamo/project/asr/output/online/best.pt
+
+  # 检查点变体（每个训练版本评估这些变体）
+  checkpoint_variants:
+    - best       # avg_keep_nbest 选出的最优
+    - avg5       # 最优 5 个 epoch 平均
+    - epoch_50   # 最后一个 epoch
+
+  # 领域指标阈值
+  thresholds:
+    improvement_cer: 0.001   # CER 改善 > 此值才算"有效"
+    min_recall: 0.90         # 指令召回率最低要求
+
+  # 错误分析配置
+  analysis:
+    bad_case_threshold: 0.1  # CER > 此值视为 bad case
+    top_n_confusion: 20      # 混淆对报告前 N 个
+    weak_spot_count: 5       # 报告薄弱设备数

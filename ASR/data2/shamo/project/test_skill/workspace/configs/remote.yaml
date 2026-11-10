@@ -1,0 +1,8 @@
+# Remote GPU server config for remote_runner.py
+host: kiro-docker-remote  # 使用 SSH config 里的别名，自动走跳板和 20099 端口
+# port: 22               # 建议直接删掉这一行，或者留着也不影响，不会覆盖 config 里的 20099
+username: root            # 容器内的用户是 root
+# password: sTE8eQRKcsmK # 删掉这一行！容器没密码，靠 SSH 密钥认证
+remote_path: /data2/shamo/project/test_skill
+remote_python: /data2/shamo/project/test_skill/workspace/.venv310/bin/python
+timeout: 30

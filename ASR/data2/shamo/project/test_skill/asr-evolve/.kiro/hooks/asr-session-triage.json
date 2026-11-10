@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "ASR Session Triage",
+      "trigger": "SessionStart",
+      "description": "ASR 优化会话分诊环路：每次会话开始读取 STATE.md + 实验树，向开发者简报当前优化状态",
+      "action": {
+        "type": "agent",
+        "prompt": "你是 ASR 优化会话分诊环路。每次会话开始时自动触发。\n\n任务：\n1. 读取 asr-evolve/STATE.md\n2. 如果有\"⚠️ LOOPS PAUSED\"标记 → 输出\"环路已暂停\"并停止\n3. 读取 asr-evolve/experiment_tree.json，调用 `asr-evolve status` 或直接解析\n4. 读取 asr-evolve/DEAD_ENDS.md 和 asr-evolve/INSIGHTS.md\n5. 读取 asr-evolve/loop-budget.md 检查今日剩余配额\n6. 输出精简简报（不超过 8 行）\n\n输出格式：\n```\n🔄 ASR 优化简报 | [日期]\n━━━━━━━━━━━━━━━━━━\n📊 当前最优: [模型/节点] CER=[值]\n🔴 高优先级: [STATE.md 中的内容或\"无\"]\n💀 死胡同: [DEAD_ENDS 中最近一条或\"无\"]\n💡 洞察: [INSIGHTS 最近一条或\"无\"]\n📦 今日预算: 已用 [n]/[max] 次训练\n🌿 活跃分支: [实验树中可继续的节点数]\n━━━━━━━━━━━━━━━━━━\n```\n\n规则：\n- 不发明工作——只报告已有信息\n- 不修改任何文件（除更新 STATE.md 的 Last run 时间戳）\n- 如果实验树为空或不存在，提示\"尚未开始优化\""
+      }
+    }
+  ]
+}

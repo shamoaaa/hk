@@ -1,0 +1,9 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = [
+    "property: Property-based tests using Hypothesis",
+]
+
+[tool.hypothesis]
+# Hypothesis settings are configured in conftest.py via profile registration

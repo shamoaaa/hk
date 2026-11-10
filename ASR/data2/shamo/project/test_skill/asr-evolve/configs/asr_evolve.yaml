@@ -1,0 +1,65 @@
+# ASR-Evolve 主配置（编排层）
+# 细节配置见同目录下的专项 yaml（augment/model/training/evaluation/remote）
+
+autonomy_level: L2  # L1=只报告不执行 L2=执行需确认 L3=全自主（需满足前提条件）
+
+# 分级定义
+levels:
+  L1:
+    description: "Report-only — 只分析报告，不执行训练/增强"
+    behavior:
+      - "THINK + DECIDE + REPORT（跳过 EXECUTE/OBSERVE/JUDGE）"
+      - "可以调用所有只读命令（suggest/strategy/agent-report/tree suggest-next）"
+      - "不可以调用 train submit / augment run / tree add"
+      - "输出分析报告和建议，等人决定"
+    upgrade_to_L2: "连续 3 轮报告无误 + 人工确认"
+
+  L2:
+    description: "Assisted — 执行关键步骤前需人工确认"
+    behavior:
+      - "完整闭环 THINK→DECIDE→EXECUTE→OBSERVE→JUDGE→RECORD→REPORT"
+      - "train submit 前向用户确认（显示配置摘要）"
+      - "augment run 前向用户确认（显示增强参数）"
+      - "train wait 后自动完成后续（OBSERVE→JUDGE→RECORD 不需确认）"
+    upgrade_to_L3: "连续 5 轮有效决策 + 准确率>60% + 无退化事件"
+
+  L3:
+    description: "Unattended — 全自主执行，只在异常时告警"
+    behavior:
+      - "完整闭环，不暂停等用户确认"
+      - "train submit 直接执行"
+      - "连续 2 次无效 → 自动暂停并降级为 L2"
+      - "任何 CER 退化 → 立即暂停并通知用户"
+    prerequisites:
+      - "INSIGHTS 中有 ≥3 条已验证经验"
+      - "hpo_history 中 ≥5 轮实验"
+      - "决策准确率 >60%"
+      - "无近期 CER 退化事件"
+
+pipeline:
+  mode: aishell  # aishell | business
+  datasets:
+    aishell: [aishell_small]
+    business: [s10_reflow, sp4_reflow]
+  stages_root: data/pipeline
+  clean_enabled: false
+
+  # 质量阈值（与原项目对齐）
+  quality_thresholds:
+    min_duration_s: 0.3          # 原项目 Q_MIN_DUR
+    max_duration_s: 30.0         # 原项目 Q_MAX_DUR
+    expected_sample_rate: 16000  # 原项目 Q_EXPECT_SR
+    expected_channels: 1
+    min_rms: 0.001               # 归一化后的阈值（原项目用 int16=50）
+    max_clip_ratio: 0.01         # 原项目 Q_CLIP_RATIO
+
+  # 切分参数（与原项目对齐）
+  split:
+    seed: 42                     # 原项目 SEED = 42
+    ratios: [0.90, 0.05, 0.05]  # 原项目 DEV_RATIO=0.05, TEST_RATIO=0.05
+
+budget:
+  max_trains_per_day: 3
+  max_consecutive_failures: 2
+  max_augment_per_day: 5
+  max_eval_per_day: 10

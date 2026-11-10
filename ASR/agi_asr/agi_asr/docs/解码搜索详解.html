@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Speech2Text 解码搜索详解</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,"Microsoft YaHei",sans-serif;background:#0f172a;color:#e2e8f0;padding:40px 20px}
+h1{text-align:center;font-size:22px;color:#38bdf8;margin-bottom:6px}
+.sub{text-align:center;font-size:12px;color:#64748b;margin-bottom:30px}
+code{background:rgba(255,255,255,.08);padding:1px 5px;border-radius:3px;font-size:11px;color:#7dd3fc;font-family:"Cascadia Code","Fira Code",monospace}
+.dim{color:#64748b} .hl{color:#fbbf24;font-weight:600} .gr{color:#4ade80} .rd{color:#f87171} .cy{color:#22d3ee}
+.container{max-width:960px;margin:0 auto}
+
+/* 决策树 */
+.tree{position:relative;padding-left:0}
+.decision{background:#1e293b;border:2px solid #6366f1;border-radius:12px;padding:16px 20px;margin:16px 0;position:relative}
+.decision::before{content:'';position:absolute;top:-16px;left:50%;width:2px;height:16px;background:#475569}
+.decision:first-child::before{display:none}
+.decision-q{font-size:14px;font-weight:700;color:#a5b4fc;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.decision-q .icon{width:24px;height:24px;background:#4338ca;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+
+.branches{display:flex;gap:12px;margin-top:12px}
+.branch-yes,.branch-no{flex:1;border-radius:8px;padding:12px 14px;font-size:12px;line-height:1.7}
+.branch-yes{background:rgba(34,197,94,.08);border:1px solid #22c55e}
+.branch-no{background:rgba(239,68,68,.08);border:1px solid #ef4444}
+.branch-label{font-weight:700;font-size:11px;margin-bottom:4px;letter-spacing:1px}
+.branch-yes .branch-label{color:#4ade80}
+.branch-no .branch-label{color:#f87171}
+
+/* 路径详解卡片 */
+.path-card{background:#1e293b;border-radius:12px;padding:20px;margin:20px 0;border:1px solid #334155}
+.path-title{font-size:15px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.path-title .badge{font-size:10px;padding:3px 8px;border-radius:4px;font-weight:700}
+.path-body{font-size:12.5px;line-height:1.8;color:#cbd5e1}
+.path-body ol{margin:8px 0 8px 20px}
+.path-body ol li{margin-bottom:6px}
+.path-body ul{margin:4px 0 4px 18px}
+
+/* 代码块 */
+.code-block{background:#0f172a;border:1px solid #334155;border-radius:8px;padding:12px 16px;margin:10px 0;font-size:11.5px;line-height:1.6;font-family:"Cascadia Code","Fira Code",monospace;overflow-x:auto;color:#94a3b8;white-space:pre;word-wrap:break-word}
+.code-block .cm{color:#475569} .code-block .kw{color:#c084fc} .code-block .fn{color:#38bdf8} .code-block .st{color:#4ade80} .code-block .num{color:#fbbf24}
+
+/* 数据流图 */
+.dataflow{display:flex;align-items:center;gap:8px;margin:10px 0;flex-wrap:wrap}
+.df-box{background:rgba(99,102,241,.15);border:1px solid #6366f1;border-radius:6px;padding:4px 10px;font-size:11px;color:#a5b4fc}
+.df-arrow{color:#475569;font-size:14px}
+
+/* 注释框 */
+.note{background:rgba(251,191,36,.06);border-left:3px solid #f59e0b;padding:10px 14px;margin:12px 0;border-radius:0 8px 8px 0;font-size:12px;color:#fcd34d}
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>Speech2Text.__call__ 解码搜索阶段详解</h1>
+<p class="sub">asr/funasr/bin/asr_inference_paraformer_vad_tp.py 第 270-395 行 · 三条解码路径的完整逻辑</p>
+
+<!-- ===== 输入 ===== -->
+<div class="path-card" style="border-color:#6366f1">
+  <div class="path-title" style="color:#a5b4fc;">📥 输入数据</div>
+  <div class="path-body">
+    <div class="dataflow">
+      <div class="df-box"><code>decoder_out</code> [B, N, Vocab]<br><span class="dim">SeACo解码器输出的log概率分布</span></div>
+      <div class="df-box"><code>enc</code> [B, T, D]<br><span class="dim">编码器输出（CTC打分用）</span></div>
+      <div class="df-box"><code>pre_token_length</code> [B]<br><span class="dim">CIF预测的token数量</span></div>
+    </div>
+    遍历 batch 中每条样本（<code>for i in range(b)</code>），截取有效部分：
+    <div class="code-block">
+x = enc[i, :enc_len[i], :]           <span class="cm"># 第i条样本的编码器输出 [T_i, D]</span>
+am_scores = decoder_out[i, :pre_token_length[i], :]  <span class="cm"># 第i条的声学得分 [N_i, Vocab]</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 决策树 ===== -->
+<div style="margin:30px 0 10px;font-size:13px;font-weight:700;color:#94a3b8;letter-spacing:2px">决策树：三条路径的分支逻辑</div>
+
+<div class="decision" style="border-color:#a855f7">
+  <div class="decision-q"><span class="icon">❶</span> <code>self.beam_search is not None</code> ?</div>
+  <div style="font-size:11.5px;color:#94a3b8;margin-bottom:8px">
+    判断条件：<code>ctc_weight != 0.0 且 asr_model.ctc != None</code>，或者使用了外部语言模型。
+    <br>本项目配置 <code>ctc_weight=0.5</code>，所以 <span class="hl">beam_search 不为 None</span>。
+  </div>
+  <div class="branches">
+    <div class="branch-yes">
+      <div class="branch-label">✅ YES → 路径 A：BeamSearchPara</div>
+      <span class="hl">本项目实际走此路径</span>
+      <br>CTC-Attention 联合 BeamSearch
+      <br>beam_size=10, ctc_weight=0.5
+    </div>
+    <div class="branch-no">
+      <div class="branch-label">❌ NO → 继续判断 ❷</div>
+      当 ctc_weight=0 且无 LM 时进入
+    </div>
+  </div>
+</div>
+
+<div class="decision" style="border-color:#f97316;margin-left:40px">
+  <div class="decision-q"><span class="icon">❷</span> <code>pre_token_length[i] == 0</code> ?</div>
+  <div style="font-size:11.5px;color:#94a3b8;margin-bottom:8px">
+    CIF 预测器认为这段音频没有有效 token（纯静音/噪声）
+  </div>
+  <div class="branches">
+    <div class="branch-yes">
+      <div class="branch-label">✅ YES → 空结果</div>
+      直接构造 <code>[sos, eos]</code> 序列
+      <br>score = 0.0
+      <br><span class="dim">跳到后处理</span>
+    </div>
+    <div class="branch-no">
+      <div class="branch-label">❌ NO → 继续判断 ❸</div>
+      有有效 token，选择解码方式
+    </div>
+  </div>
+</div>
+
+<div class="decision" style="border-color:#06b6d4;margin-left:80px">
+  <div class="decision-q"><span class="icon">❸</span> <code>hotword_list != None 且 eable_fst_search == True</code> ?</div>
+  <div style="font-size:11.5px;color:#94a3b8;margin-bottom:8px">
+    是否启用了 FST 热词搜索。本项目 <code>eable_fst_search=False</code>。
+  </div>
+  <div class="branches">
+    <div class="branch-yes">
+      <div class="branch-label">✅ YES → 路径 B：FST 热词 CTC Prefix Beam Search</div>
+      构建 ContextGraph + CTC prefix beam search
+      <br>+ 热词上下文打分
+      <br><span class="dim">本项目不走此路径</span>
+    </div>
+    <div class="branch-no">
+      <div class="branch-label">❌ NO → 路径 C：贪心解码</div>
+      <code>argmax(am_scores)</code>
+      <br>直接取每帧最大概率 token
+      <br><span class="dim">最快但准确率最低</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 路径A详解 ===== -->
+<div style="margin:40px 0 10px;font-size:13px;font-weight:700;color:#94a3b8;letter-spacing:2px">路径 A · BeamSearchPara（本项目实际路径）</div>
+
+<div class="path-card" style="border-color:#22c55e">
+  <div class="path-title" style="color:#4ade80;"><span class="badge" style="background:#166534;color:#bbf7d0;">路径A</span> CTC-Attention 联合 BeamSearch</div>
+  <div class="path-body">
+    <div class="code-block">
+nbest_hyps = self.beam_search(
+    x=x,              <span class="cm"># 编码器输出 [T_i, D]，供 CTC scorer 使用</span>
+    am_scores=am_scores,  <span class="cm"># SeACo 解码器输出 [N_i, Vocab]，作为 Attention 得分</span>
+    maxlenratio=0.0,  <span class="cm"># 最大长度比（0=不限制，用 end_detect 自动停止）</span>
+    minlenratio=0.0   <span class="cm"># 最小长度比（0=不限制）</span>
+)
+nbest_hyps = nbest_hyps[:self.nbest]  <span class="cm"># 取 top-1（nbest=1）</span>
+    </div>
+
+    <div style="margin-top:12px;font-weight:700;color:#4ade80;font-size:12px;">BeamSearchPara.forward() 内部流程：</div>
+    <ol>
+      <li><span class="hl">初始化</span>：创建初始假设 <code>running_hyps = [Hypothesis(yseq=[sos], score=0)]</code></li>
+      <li><span class="hl">逐步搜索</span>（<code>for i in range(maxlen)</code>，maxlen = N_token）：
+        <ul>
+          <li>对每个假设，用 <code>am_scores[i]</code> 作为 Attention decoder 的得分（<span class="cy">非自回归特性：不需要逐步调 decoder，得分已预计算</span>）</li>
+          <li>用 <code>CTCPrefixScorer</code> 计算 CTC 前缀得分</li>
+          <li>用 <code>LengthBonus</code> 计算长度惩罚</li>
+          <li>加权融合：<code>score = 0.5 × ctc_score + 0.5 × attention_score + 0.0 × lm_score + penalty</code></li>
+          <li>保留 top-K 假设（beam_size=10）</li>
+        </ul>
+      </li>
+      <li><span class="hl">结束检测</span>：当假设以 <code>eos</code> 结尾时移入 <code>ended_hyps</code>，或触发 <code>end_detect</code></li>
+      <li><span class="hl">排序输出</span>：按总分降序排列，返回 N-best 列表</li>
+    </ol>
+
+    <div class="note">
+      💡 关键点：Paraformer 是非自回归模型，<code>am_scores</code> 已经一次性输出了所有 token 位置的概率分布。
+      BeamSearchPara 不需要像自回归模型那样每步调 decoder，它只是在已有的 <code>am_scores</code> 上做 CTC 重打分和剪枝。
+      这使得 beam search 的计算量远小于自回归模型。
+    </div>
+  </div>
+</div>
+
+<!-- ===== 路径B详解 ===== -->
+<div style="margin:40px 0 10px;font-size:13px;font-weight:700;color:#94a3b8;letter-spacing:2px">路径 B · FST 热词 CTC Prefix Beam Search（本项目未启用）</div>
+
+<div class="path-card" style="border-color:#f97316">
+  <div class="path-title" style="color:#fb923c;"><span class="badge" style="background:#9a3412;color:#fed7aa;">路径B</span> ContextGraph + CTC Prefix Beam Search + 热词打分</div>
+  <div class="path-body">
+    <div style="font-weight:700;color:#fb923c;font-size:12px;margin-bottom:8px;">整体思路：</div>
+    在标准 CTC prefix beam search 基础上，额外维护一个热词状态机（ContextGraph），对匹配热词的路径给予额外加分。
+
+    <div style="font-weight:700;color:#fb923c;font-size:12px;margin:16px 0 8px;">逐步流程：</div>
+    <ol>
+      <li>
+        <span class="hl">构建热词图</span>：<code>context_graph = ContextGraph(self.hotword_list)</code>
+        <br><span class="dim">基于字典（非 WFST）实现的前缀树，每个节点存储热词匹配状态和得分</span>
+      </li>
+      <li>
+        <span class="hl">初始化假设</span>：
+        <div class="code-block">
+cur_hyps = [(tuple(), (0.0, -float('inf'), 0, 0.0))]
+<span class="cm">#            prefix    pb     pnb    c_state  c_score</span>
+<span class="cm">#            空前缀  blank概率 非blank概率 热词状态  热词得分</span>
+        </div>
+      </li>
+      <li>
+        <span class="hl">逐帧搜索</span>（<code>for t in range(N_token)</code>）：
+        <br>对每一帧 <code>am_scores[t]</code>（词表大小的 log 概率向量）：
+        <ol style="margin-top:6px;">
+          <li><span class="cy">First beam prune</span>：取 top-10 候选 token（<code>logp.topk(beam_size)</code>）</li>
+          <li>对每个候选 token <code>s</code>，遍历当前所有假设 <code>cur_hyps</code>：
+            <div style="display:flex;gap:10px;margin:8px 0;">
+              <div style="flex:1;padding:8px;background:rgba(0,0,0,.2);border-radius:6px;">
+                <div style="color:#4ade80;font-weight:700;font-size:11px;margin-bottom:4px;">s == 0（blank）</div>
+                <span class="dim">前缀不变，更新 blank 概率：</span>
+                <br><code>pb = log_add(pb + ps, pnb + ps)</code>
+                <br><span class="dim">热词状态和得分不变</span>
+              </div>
+              <div style="flex:1;padding:8px;background:rgba(0,0,0,.2);border-radius:6px;">
+                <div style="color:#fbbf24;font-weight:700;font-size:11px;margin-bottom:4px;">s != 0（非 blank）</div>
+                <span class="dim">扩展前缀：</span><code>n_prefix = prefix + (s,)</code>
+                <br><span class="dim">查询热词状态机：</span>
+                <br><code>new_c_state, new_c_score = context_graph.find_next_state(c_state, s)</code>
+                <br><span class="dim">更新非 blank 概率 + 累加热词得分</span>
+              </div>
+            </div>
+          </li>
+          <li><span class="cy">Second beam prune</span>：按 <code>log_add(pb, pnb) + c_score</code> 排序，保留 top-10
+            <br><span class="dim">注意：排序时热词得分 <code>c_score</code> 直接加到声学得分上，使匹配热词的路径获得额外加分</span>
+          </li>
+        </ol>
+      </li>
+      <li>
+        <span class="hl">输出</span>：取最优假设的 token 序列，过滤掉 blank(0)、eos(2)、unk(8403)
+      </li>
+    </ol>
+
+    <div class="note">
+      ⚠️ 注意：代码中 <code>elif s == last</code>（重复 token 处理）被注释掉了。
+      标准 CTC prefix beam search 需要区分"重复 token"和"blank 分隔的相同 token"，
+      但这里简化为所有非 blank token 都直接扩展前缀。这可能导致重复字符的处理不够精确，
+      但对中文场景影响较小（中文很少有连续相同字符）。
+    </div>
+
+    <div style="margin-top:12px;font-weight:700;color:#fb923c;font-size:12px;">热词打分示例：</div>
+    <div class="code-block">
+<span class="cm"># 假设热词列表包含 "萤石" → token IDs [7891, 6502]</span>
+<span class="cm"># ContextGraph 内部是一个前缀树：</span>
+<span class="cm">#   root --7891--> node1 (score=0.5) --6502--> node2 (score=1.0)</span>
+<span class="cm">#</span>
+<span class="cm"># 当解码路径产生 token 7891 时：</span>
+<span class="cm">#   c_state: 0 → 1, c_score += 0.5</span>
+<span class="cm"># 当接着产生 token 6502 时：</span>
+<span class="cm">#   c_state: 1 → 2, c_score += 1.0</span>
+<span class="cm"># 总热词加分 = 1.5，使 "萤石" 路径在排序时更靠前</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 路径C详解 ===== -->
+<div style="margin:40px 0 10px;font-size:13px;font-weight:700;color:#94a3b8;letter-spacing:2px">路径 C · 贪心解码</div>
+
+<div class="path-card" style="border-color:#64748b">
+  <div class="path-title" style="color:#94a3b8;"><span class="badge" style="background:#475569;color:#e2e8f0;">路径C</span> Argmax 贪心解码</div>
+  <div class="path-body">
+    最简单的解码方式，不做搜索，直接取每个位置概率最大的 token：
+    <div class="code-block">
+yseq = am_scores.argmax(dim=-1)       <span class="cm"># [N_i] 每帧取最大概率的token ID</span>
+score = am_scores.max(dim=-1)[0]      <span class="cm"># [N_i] 对应的概率值</span>
+score = torch.sum(score, dim=-1)      <span class="cm"># 标量，所有帧概率之和</span>
+yseq = [sos] + yseq.tolist() + [eos]  <span class="cm"># 首尾加 sos/eos</span>
+nbest_hyps = [Hypothesis(yseq=yseq, score=score)]
+    </div>
+    <span class="dim">优点：速度最快，无搜索开销。缺点：无法利用 CTC 约束和语言模型，准确率最低。</span>
+    <br><span class="dim">适用场景：ctc_weight=0 且无 LM 且未启用 FST 热词搜索时的 fallback。</span>
+  </div>
+</div>
+
+<!-- ===== 后处理 ===== -->
+<div style="margin:40px 0 10px;font-size:13px;font-weight:700;color:#94a3b8;letter-spacing:2px">公共后处理（三条路径汇合）</div>
+
+<div class="path-card" style="border-color:#06b6d4">
+  <div class="path-title" style="color:#22d3ee;"><span class="badge" style="background:#0e7490;color:#cffafe;">后处理</span> Token ID → 字符 Token → 时间戳（可选）</div>
+  <div class="path-body">
+    路径 A 和路径 C 的结果都会经过这段后处理（路径 B 有自己的后处理后直接 return）：
+
+    <div class="code-block">
+<span class="cm"># 1. 提取 token ID 序列，去掉首尾的 sos/eos</span>
+token_int = hyp.yseq[1:-1].tolist()
+
+<span class="cm"># 2. 过滤特殊 token</span>
+token_int = list(filter(
+    lambda x: x != 0    <span class="cm"># 去掉 blank</span>
+          and x != 2     <span class="cm"># 去掉 eos</span>
+          and x != 1,    <span class="cm"># 去掉 unk</span>
+    token_int
+))
+
+<span class="cm"># 3. ID → 字符</span>
+token = self.converter.ids2tokens(token_int)
+<span class="cm"># 例：[345, 123, 7891, 6502] → ["你", "好", "萤", "石"]</span>
+
+<span class="cm"># 4. 时间戳对齐（可选）</span>
+<span class="kw">if</span> self.eable_time_stamp:
+    _, timestamp = ts_prediction_lfr6_standard(
+        us_alphas[i][:enc_len[i] * 3],  <span class="cm"># 上采样后的CIF发射概率</span>
+        us_peaks[i][:enc_len[i] * 3],   <span class="cm"># 上采样后的峰值位置</span>
+        copy.copy(token),                <span class="cm"># token列表（会被修改，所以深拷贝）</span>
+        vad_offset=begin_time            <span class="cm"># VAD起始时间偏移</span>
+    )
+    results.append((token, hyp, timestamp))
+<span class="kw">else</span>:
+    results.append((token, hyp))
+    </div>
+
+    <div style="margin-top:12px;font-weight:700;color:#22d3ee;font-size:12px;">三条路径的过滤差异：</div>
+    <table style="width:100%;font-size:11.5px;border-collapse:collapse;margin-top:6px;">
+      <tr style="border-bottom:1px solid #334155;">
+        <td style="padding:6px;color:#64748b;width:120px;">路径</td>
+        <td style="padding:6px;color:#64748b;">过滤的 token ID</td>
+        <td style="padding:6px;color:#64748b;">说明</td>
+      </tr>
+      <tr style="border-bottom:1px solid #334155;">
+        <td style="padding:6px;color:#4ade80;">A (BeamSearch)</td>
+        <td style="padding:6px;"><code>0</code>(blank), <code>2</code>(eos), <code>1</code>(unk)</td>
+        <td style="padding:6px;">BeamSearch 输出可能包含 unk</td>
+      </tr>
+      <tr style="border-bottom:1px solid #334155;">
+        <td style="padding:6px;color:#fb923c;">B (FST)</td>
+        <td style="padding:6px;"><code>0</code>(blank), <code>2</code>(eos), <code>8403</code>(sos)</td>
+        <td style="padding:6px;">FST 搜索的 prefix 可能残留 sos</td>
+      </tr>
+      <tr>
+        <td style="padding:6px;color:#94a3b8;">C (贪心)</td>
+        <td style="padding:6px;"><code>0</code>(blank), <code>2</code>(eos), <code>1</code>(unk)</td>
+        <td style="padding:6px;">同路径 A</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<!-- ===== 完整数据流 ===== -->
+<div style="margin:40px 0 10px;font-size:13px;font-weight:700;color:#94a3b8;letter-spacing:2px">完整数据流总览</div>
+
+<div class="path-card" style="border-color:#6366f1">
+  <div class="path-body">
+    <pre style="font-size:11px;line-height:1.8;color:#94a3b8;font-family:'Cascadia Code','Fira Code',monospace;overflow-x:auto;">
+decoder_out [B, N, Vocab]          enc [B, T, D]          pre_token_length [B]
+       │                               │                         │
+       ▼                               ▼                         │
+  ┌─ for i in range(B) ─────────────────────────────────────────┐│
+  │                                                              ││
+  │  am_scores = decoder_out[i, :N_i, :]    x = enc[i, :T_i, :] ││
+  │       │                                      │               ││
+  │       ▼                                      │               ││
+  │  ┌─ beam_search != None? ────────────────────┤               │
+  │  │                                           │               │
+  │  │  <span style="color:#4ade80;">YES → 路径A: BeamSearchPara</span>              │               │
+  │  │  ┌──────────────────────────┐             │               │
+  │  │  │ 逐步遍历 am_scores[t]   │             │               │
+  │  │  │ CTC scorer 用 x 打分    │◄────────────┘               │
+  │  │  │ 加权融合 + beam 剪枝    │                             │
+  │  │  │ → nbest_hyps            │                             │
+  │  │  └──────────────────────────┘                             │
+  │  │                                                           │
+  │  │  <span style="color:#f87171;">NO → token_length == 0?</span>                                  │
+  │  │     │                                                     │
+  │  │     ├─ <span style="color:#4ade80;">YES → [sos, eos], score=0</span>                          │
+  │  │     │                                                     │
+  │  │     └─ <span style="color:#f87171;">NO → FST enabled?</span>                                  │
+  │  │          │                                                │
+  │  │          ├─ <span style="color:#fb923c;">YES → 路径B: ContextGraph + CTC prefix</span>       │
+  │  │          │   构建热词图 → 逐帧搜索 → 热词加分            │
+  │  │          │   → token → <span style="color:#fb923c;">直接 return</span>                       │
+  │  │          │                                                │
+  │  │          └─ <span style="color:#94a3b8;">NO → 路径C: argmax 贪心</span>                     │
+  │  │              am_scores.argmax → yseq                      │
+  │  │                                                           │
+  │  ▼                                                           │
+  │  nbest_hyps: [Hypothesis(yseq, score)]                       │
+  │       │                                                      │
+  │       ▼                                                      │
+  │  ┌─ 后处理 ──────────────────────┐                           │
+  │  │ yseq → 去 sos/eos            │                           │
+  │  │ → 过滤 blank/eos/unk         │                           │
+  │  │ → ids2tokens → ["你","好",...] │                           │
+  │  │ → (可选) 时间戳对齐           │                           │
+  │  └───────────────────────────────┘                           │
+  │       │                                                      │
+  │       ▼                                                      │
+  │  results.append((token, hyp))                                │
+  │                                                              │
+  └──────────────────────────────────────────────────────────────┘
+       │
+       ▼
+  return results   <span style="color:#64748b;">→ 返回给 _forward 闭包做文本拼接和后处理</span>
+    </pre>
+  </div>
+</div>
+
+<!-- ===== 本项目配置 ===== -->
+<div class="note" style="margin-top:20px;">
+  📌 <span class="hl">本项目实际执行路径</span>：由于配置 <code>ctc_weight=0.5</code>（beam_search 不为 None）、<code>eable_fst_search=False</code>、<code>eable_time_stamp=False</code>，
+  实际只走 <span style="color:#4ade80;font-weight:700;">路径 A（BeamSearchPara）</span>，后处理中不计算时间戳，返回 <code>(token, hyp)</code> 二元组。
+</div>
+
+</div><!-- end container -->
+</body>
+</html>

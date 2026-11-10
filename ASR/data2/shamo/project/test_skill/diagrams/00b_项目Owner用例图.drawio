@@ -1,0 +1,55 @@
+<mxfile host="65bd71144e">
+    <diagram name="项目Owner用例图" id="uc_owner">
+        <mxGraphModel dx="957" dy="726" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="610" pageHeight="459" background="#FFFFFF" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="2" value="" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;dashed=1" parent="1" vertex="1">
+                    <mxGeometry x="150" y="20" width="420" height="410" as="geometry"/>
+                </mxCell>
+                <mxCell id="2t" value="系统" style="text;fontSize=9;fontStyle=2;fontColor=#333333;align=left" parent="1" vertex="1">
+                    <mxGeometry x="155" y="22" width="40" height="16" as="geometry"/>
+                </mxCell>
+                <mxCell id="a1" value="项目Owner" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;fontSize=9;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="50" y="180" width="30" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="uc1" value="与Agent交互" style="ellipse;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=9;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="230" y="35" width="140" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="uc2" value="管理公共数据集" style="ellipse;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=9;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="230" y="95" width="140" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="uc3" value="管理热词文件" style="ellipse;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=9;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="230" y="155" width="140" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="uc4" value="修改训练/增强配置" style="ellipse;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=9;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="230" y="215" width="150" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="uc5" value="启动/停止Agent" style="ellipse;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=9;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="230" y="275" width="140" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="uc6" value="查看实验/Trace/评测" style="ellipse;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=9;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="230" y="335" width="150" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="l1" style="strokeColor=#333333;endArrow=none" parent="1" source="a1" target="uc1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="l2" style="strokeColor=#333333;endArrow=none" parent="1" source="a1" target="uc2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="l3" style="strokeColor=#333333;endArrow=none" parent="1" source="a1" target="uc3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="l4" style="strokeColor=#333333;endArrow=none" parent="1" source="a1" target="uc4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="l5" style="strokeColor=#333333;endArrow=none" parent="1" source="a1" target="uc5" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="l6" style="strokeColor=#333333;endArrow=none" parent="1" source="a1" target="uc6" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

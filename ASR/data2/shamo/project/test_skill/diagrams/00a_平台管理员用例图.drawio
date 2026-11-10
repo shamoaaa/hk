@@ -1,0 +1,39 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="平台管理员用例图" id="uc_admin">
+    <mxGraphModel dx="600" dy="400" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="560" pageHeight="360" background="#FFFFFF">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <!-- 系统边界 -->
+        <mxCell id="2" value="" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;dashed=1" vertex="1" parent="1">
+          <mxGeometry x="150" y="20" width="380" height="310" as="geometry" />
+        </mxCell>
+        <mxCell id="2t" value="系统" style="text;fontSize=9;fontStyle=2;fontColor=#333333;align=left" vertex="1" parent="1">
+          <mxGeometry x="155" y="22" width="40" height="16" as="geometry" />
+        </mxCell>
+        <!-- 角色 -->
+        <mxCell id="a1" value="平台管理员" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;fontSize=9;fontColor=#000000" vertex="1" parent="1">
+          <mxGeometry x="50" y="130" width="30" height="50" as="geometry" />
+        </mxCell>
+        <!-- 用例 -->
+        <mxCell id="uc1" value="用户注册与管理" style="ellipse;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=9;fontColor=#000000" vertex="1" parent="1">
+          <mxGeometry x="220" y="40" width="140" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="uc2" value="创建项目" style="ellipse;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=9;fontColor=#000000" vertex="1" parent="1">
+          <mxGeometry x="220" y="105" width="140" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="uc3" value="删除项目" style="ellipse;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=9;fontColor=#000000" vertex="1" parent="1">
+          <mxGeometry x="220" y="170" width="140" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="uc4" value="分配项目成员与角色" style="ellipse;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333;fontSize=9;fontColor=#000000" vertex="1" parent="1">
+          <mxGeometry x="220" y="235" width="150" height="45" as="geometry" />
+        </mxCell>
+        <!-- 连线 -->
+        <mxCell id="l1" style="strokeColor=#333333;endArrow=none" edge="1" source="a1" target="uc1" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="l2" style="strokeColor=#333333;endArrow=none" edge="1" source="a1" target="uc2" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="l3" style="strokeColor=#333333;endArrow=none" edge="1" source="a1" target="uc3" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="l4" style="strokeColor=#333333;endArrow=none" edge="1" source="a1" target="uc4" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

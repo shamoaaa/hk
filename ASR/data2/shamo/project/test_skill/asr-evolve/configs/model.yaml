@@ -1,0 +1,23 @@
+# 模型配置
+# 与原项目对齐：SeaCo-Paraformer 基座
+
+model:
+  name: speech_seaco_paraformer_large_asr_nat-zh-cn-16k-common-vocab8404-pytorch
+  framework: funasr
+  modelscope_id: iic/speech_seaco_paraformer_large_asr_nat-zh-cn-16k-common-vocab8404-pytorch
+
+  # 服务器端路径（日志确认真实路径带 iic/ 前缀）
+  model_dir: /data/shamo/project/asr/models/iic/speech_seaco_paraformer_large_asr_nat-zh-cn-16k-common-vocab8404-pytorch
+
+  # SeaCo 热词
+  seaco:
+    seaco_id: 8377               # NO_BIAS token（原项目 dataset_conf.seaco_id）
+    hotwords_file: configs/hotwords.txt
+
+  # 推理参数
+  inference:
+    beam_size: 5
+    batch_size: 32
+    use_gpu: true
+    # 推理脚本（服务器端）
+    decode_script: /data/shamo/project/asr/scripts/decode.sh

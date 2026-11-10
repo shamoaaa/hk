@@ -1,0 +1,38 @@
+@startuml
+skinparam defaultFontName "Microsoft YaHei"
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam linetype ortho
+skinparam nodesep 12
+skinparam ranksep 18
+skinparam rectangle {
+  BackgroundColor #F0F0F0
+  BorderColor #333333
+}
+
+rectangle "Agent 决策引擎" {
+
+  rectangle "① Prompt Builder（动态提示词构建器）\n身份定义 + ASR领域知识 + 实验树摘要\n+ 紧凑记忆 + Skill索引 + 约束规则" as PB #FFFFFF
+  rectangle "② LLM 推理核心\n调用外部 LLM API 获取决策" as LLM #FFFFFF
+  rectangle "③ Tool/Skill Dispatcher（能力调度器）\n解析调用指令，路由到 Tool 层或 Skill 层" as Disp #FFFFFF
+
+  rectangle "Tool Registry（通用工具注册表）\nread_file / write_file / run_command\nedit_yaml / query_database" as TR #FFFFFF
+  rectangle "Skill Registry（领域技能注册表）\nprepare_data / quality_scan / split_dataset / augment_data\nmerge_sources / generate_manifest / train_model\nevaluate_model / analyze_results / edit_config" as SR #FFFFFF
+  rectangle "Memory 层（记忆系统，文件存储）\n实验树 experiment_tree.json / 紧凑记忆 MEMORY_LOG.md\n死胡同 DEAD_ENDS.md / 洞察 INSIGHTS.md" as MEM #FFFFFF
+
+  rectangle "④ Context Engine（上下文管理）\nToken计数 / 历史压缩 / 记忆 compact / 窗口管理" as CE #FFFFFF
+  rectangle "⑤ Iteration Budget（迭代预算控制）\nmax_rounds / max_gpu_hours / no_improve_stop" as IB #FFFFFF
+  rectangle "⑥ Trajectory Logger（轨迹记录器）\n每轮 THINK / EXECUTE / REFLECT → Trace Span → 数据库" as TL #FFFFFF
+
+  PB --> LLM
+  LLM --> Disp
+  Disp --> TR
+  Disp --> SR
+  Disp --> MEM
+  TR -[hidden]-> SR
+  SR -[hidden]-> MEM
+  MEM --> CE
+  CE --> IB
+  IB --> TL
+}
+@enduml

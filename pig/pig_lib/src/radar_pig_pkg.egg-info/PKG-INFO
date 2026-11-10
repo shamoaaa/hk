@@ -1,0 +1,15 @@
+Metadata-Version: 2.4
+Name: radar_pig_pkg
+Version: 0.1.0
+Summary: radar pig package
+Requires-Dist: pandas
+Requires-Dist: numpy
+Requires-Dist: dtaidistance
+Requires-Dist: h5py
+Requires-Dist: matplotlib
+Requires-Dist: oss2
+Requires-Dist: scikit_learn
+Requires-Dist: scipy
+Requires-Dist: xgboost
+Dynamic: requires-dist
+Dynamic: summary

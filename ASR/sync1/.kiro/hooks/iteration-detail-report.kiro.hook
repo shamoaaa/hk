@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Iteration Detail Report",
+  "description": "每次 agent 执行完毕后，自动生成本轮迭代的详细报告，包含训练指标、评估结果、badcase 分析、优化操作、前后对比、知识库更新、Skill 进化状态等完整细节。",
+  "version": "1",
+  "when": {
+    "type": "agentStop"
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "cd /data2/shamo/project/test_skill/workspace && PYTHONPATH=. .venv/bin/python scripts/generate_iteration_report.py --latest 2>/dev/null || echo \"报告生成失败（可能尚无迭代数据）\"",
+    "timeout": 30
+  }
+}

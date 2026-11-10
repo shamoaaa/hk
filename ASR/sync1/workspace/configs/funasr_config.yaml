@@ -1,0 +1,103 @@
+model:
+  name: iic/speech_seaco_paraformer_large_asr_nat-zh-cn-16k-common-vocab8404-pytorch
+  hub: ms
+  model_revision: v2.0.4
+  attention_heads: 8
+  hidden_dim: 512
+  seaco_params:
+    co_decoder_layers: 3
+    attention_weight: 0.6
+  speech_enhance_config:
+    type: conv_tasnet
+    channels: 64
+data:
+  # 原始数据（只读，仅供增强器读取）
+  train_jsonl: data/train.jsonl
+  val_jsonl: data/val.jsonl
+  test_jsonl: data/test.jsonl
+  original_dir: data/original
+  # 增强后数据（训练和推理必须使用这些路径）
+  # 由 run_augmentation.py 自动生成到 {augmented_dir}/train_aug.jsonl
+  # 和 {augmented_dir}/test_aug.jsonl
+  augmented_train_jsonl: data/augmented/train_aug.jsonl
+  augmented_val_jsonl: data/augmented/val_aug.jsonl
+  augmented_test_jsonl: data/augmented/test_aug.jsonl
+augmentation:
+  # 业务强制要求：train 和 test 都必须经过增强才能用于训练/评估
+  # 此字段不可设为 false
+  enabled: true
+  require_augmentation: true  # 强制校验开关
+  noise_dir: data/musan
+  download_musan: false
+  augmented_dir: data/augmented
+  strategies:
+  - type: babble
+    snr_range:
+    - 5
+    - 20
+    probability: 0.4
+    num_speakers:
+    - 1
+    - 3
+  - type: music
+    snr_range:
+    - 5
+    - 25
+    probability: 0.2
+  - type: noise
+    snr_range:
+    - 5
+    - 25
+    probability: 0.2
+  - type: reverb
+    probability: 0.15
+    rt60_range:
+    - 0.1
+    - 1.0
+training:
+  output_dir: models/iterations
+  max_epoch: 3
+  batch_size: 32
+  batch_type: token
+  num_workers: 4
+  learning_rate: 5.0e-05
+  lr_schedule: step_decay
+  warmup_steps: 100
+  weight_decay: 0.05
+  gradient_clip: 3.0
+  log_interval: 10
+  validate_interval: 500
+  save_checkpoint_interval: 500
+  keep_nbest_models: 5
+  avg_nbest_model: 3
+  resume: false
+  max_token_length: 2000
+  gpu_ids: '4'
+  # SpecAugment 频谱遮挡增强（训练时应用到特征上）
+  spec_aug:
+    enabled: false
+    num_t_mask: 2           # 时间域遮挡块数
+    num_f_mask: 2           # 频率域遮挡块数
+    max_t: 50               # 时间域每块最大帧数
+    max_f: 10               # 频率域每块最大频点
+    max_w: 80               # 时间扭曲最大偏移
+evaluation:
+  metrics:
+  - cer
+  - wer
+  generate_report: true
+  report_dir: reports/evaluation
+  badcase_threshold: 0.3
+post_process:
+  hotword_file: configs/post_process/hotwords.txt
+  enable_lm_rerank: true
+  lm_model_path: null
+  pipeline_order:
+  - hotword
+  - regex
+  - lm_rerank
+  regex_rules:
+  - pattern: ' '
+    replacement: ''
+    description: Remove spaces between Chinese characters
+    priority: 1

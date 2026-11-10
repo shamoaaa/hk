@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Task Verification Loop",
+      "trigger": "PostTaskExec",
+      "description": "任务验证环路：Spec 任务完成后验证产物并更新 STATE.md",
+      "action": {
+        "type": "agent",
+        "prompt": "你是任务验证环路（Task Verification Loop）。当一个 Spec 任务被标记为完成时自动触发。\n\n你的任务：\n1. 读取 STATE.md，检查是否有 LOOPS PAUSED 标记（有则跳过）\n2. 确认刚完成的任务是否真正达标：\n   - 检查相关文件是否已创建/修改\n   - 如果有测试文件，尝试确认测试是否通过\n   - 检查是否有遗留的 TODO / FIXME 标记\n3. 根据验证结果更新 STATE.md：\n   - 通过 → 在\"已完成的任务\"区域记录（任务描述 + 完成时间）\n   - 未通过 → 在\"高优先级\"区域标注（原因 + 建议下一步）\n4. 在 loop-run-log.md 追加一条运行记录\n\n输出格式：\n```\n✅ 任务验证通过: [任务简述]\n   已更新 STATE.md\n```\n或：\n```\n❌ 任务验证未通过: [任务简述]\n   原因: [具体原因]\n   建议: [下一步行动]\n   已标记到 STATE.md 高优先级\n```\n\n规则：\n- 验证要具体——不要只说\"看起来可以\"\n- 如果无法确定是否通过（比如没有测试），标记为\"需人工确认\"放入观察列表\n- 不要修改业务代码，只更新 STATE.md 和 loop-run-log.md\n- 验证失败不代表要回滚——只是标记需要关注"
+      }
+    }
+  ]
+}

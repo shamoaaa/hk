@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图解Transformer</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+            line-height: 1.8;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px 30px;
+            background-color: #fdfdfd;
+        }
+        h1 { font-size: 2em; margin-bottom: 0.3em; color: #222; }
+        h2 { font-size: 1.5em; margin-top: 2em; color: #333; border-bottom: 1px solid #eee; padding-bottom: 0.3em; }
+        p { margin: 1em 0; }
+        img { max-width: 100%; height: auto; display: block; margin: 1.5em auto; border-radius: 4px; }
+        .caption {
+            text-align: center; font-size: 0.9em; color: #666;
+            margin-top: -1em; margin-bottom: 1.5em; font-style: italic;
+        }
+        a { color: #4183c4; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        blockquote {
+            border-left: 4px solid #ddd; margin: 1.5em 0; padding: 0.5em 1em;
+            color: #555; background: #f9f9f9;
+        }
+        ul, ol { padding-left: 2em; }
+        li { margin: 0.4em 0; }
+        code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-size: 0.95em; }
+        .note {
+            background: #fff8e1; border-left: 4px solid #ffc107; padding: 12px 16px;
+            margin: 1.5em 0; border-radius: 4px;
+        }
+        .source-note {
+            margin-top: 3em; padding-top: 1em; border-top: 1px solid #ddd;
+            font-size: 0.85em; color: #888;
+        }
+    </style>
+</head>
+<body>
+
+<h1>图解Transformer</h1>
+
+<p><small>原文：<a href="https://jalammar.github.io/illustrated-transformer/">The Illustrated Transformer</a> — Jay Alammar</small></p>
+
+<div class="note">
+<strong>更新：</strong>这篇文章现已出版成书！请访问 <a href="https://llm-book.com/">LLM-book.com</a>，其中第3章包含了本文的更新和扩展版本，介绍了最新的Transformer模型以及它们在原始Transformer发布七年以来的演变（如多查询注意力和RoPE位置编码）。
+</div>
+
+<p>在<a href="https://jalammar.github.io/visualizing-neural-machine-translation-mechanics-of-seq2seq-models-with-attention/">上一篇文章</a>中，我们介绍了注意力机制（Attention）——一种在现代深度学习模型中无处不在的方法。注意力机制是一个帮助提升神经机器翻译性能的概念。在本文中，我们将介绍 <strong>Transformer</strong>——一个利用注意力机制来加速模型训练的模型。Transformer在特定任务上超越了Google神经机器翻译模型。然而，最大的优势在于Transformer非常适合并行化处理。事实上，Google Cloud建议使用Transformer作为参考模型来使用其 <a href="https://cloud.google.com/tpu/">Cloud TPU</a> 产品。那么让我们来拆解这个模型，看看它是如何工作的。</p>
+
+<p>Transformer最初在论文 <a href="https://arxiv.org/abs/1706.03762">《Attention is All You Need》</a> 中被提出。其TensorFlow实现作为 <a href="https://github.com/tensorflow/tensor2tensor">Tensor2Tensor</a> 包的一部分提供。哈佛大学NLP组创建了一个<a href="http://nlp.seas.harvard.edu/2018/04/03/attention.html">用PyTorch实现注释该论文的指南</a>。在本文中，我们将尝试把事情简化一些，逐一介绍各个概念，希望能让没有深入背景知识的人也能更容易理解。</p>
+
+<h2>宏观视角</h2>
+
+<p>让我们首先把模型看作一个黑盒子。在机器翻译应用中，它接收一种语言的句子，输出另一种语言的翻译。</p>
+
+<img src="https://jalammar.github.io/images/t/the_transformer_3.png" alt="Transformer概览">
+
+<p>打开这个"擎天柱"，我们可以看到一个编码组件、一个解码组件，以及它们之间的连接。</p>
+
+<img src="https://jalammar.github.io/images/t/The_transformer_encoders_decoders.png" alt="编码器和解码器">
+
+<p>编码组件是一组编码器的堆叠（论文中将六个编码器堆叠在一起——数字六没有什么神奇之处，完全可以尝试其他配置）。解码组件是相同数量的解码器堆叠。</p>
+
+<img src="https://jalammar.github.io/images/t/The_transformer_encoder_decoder_stack.png" alt="编码器解码器堆叠">
+
+<p>所有编码器在结构上完全相同（但它们不共享权重）。每个编码器可以分解为两个子层：</p>
+
+<img src="https://jalammar.github.io/images/t/Transformer_encoder.png" alt="Transformer编码器">
+
+<p>编码器的输入首先流经一个自注意力层（Self-Attention Layer）——该层帮助编码器在编码某个特定词时关注输入句子中的其他词。我们将在后文中更详细地介绍自注意力机制。</p>
+
+<p>自注意力层的输出被送入一个前馈神经网络（Feed-Forward Neural Network）。完全相同的前馈网络独立地应用于每个位置。</p>
+
+<p>解码器也有这两个层，但在它们之间还有一个注意力层，帮助解码器关注输入句子的相关部分（类似于<a href="https://jalammar.github.io/visualizing-neural-machine-translation-mechanics-of-seq2seq-models-with-attention/">seq2seq模型</a>中注意力的作用）。</p>
+
+<img src="https://jalammar.github.io/images/t/Transformer_decoder.png" alt="Transformer解码器">
+
+<h2>引入张量</h2>
+
+<p>现在我们已经了解了模型的主要组件，让我们开始看看各种向量/张量是如何在这些组件之间流动的，从而将训练好的模型的输入转化为输出。</p>
+
+<p>与一般的NLP应用一样，我们首先使用<a href="https://medium.com/deeper-learning/glossary-of-deep-learning-word-embedding-f90c3cec34ca">嵌入算法</a>将每个输入词转换为一个向量。</p>
+
+<img src="https://jalammar.github.io/images/t/embeddings.png" alt="词嵌入">
+<p class="caption">每个词被嵌入为一个大小为512的向量。我们用这些简单的方框来表示这些向量。</p>
+
+<p>嵌入只发生在最底层的编码器中。所有编码器共有的抽象是：它们接收一个向量列表，每个向量的大小为512——在最底层编码器中，这些是词嵌入；而在其他编码器中，则是其正下方编码器的输出。这个列表的大小是一个可以设置的超参数——基本上就是训练数据集中最长句子的长度。</p>
+
+<p>在对输入序列中的词进行嵌入之后，每个词都会流经编码器的两个层。</p>
+
+<img src="https://jalammar.github.io/images/t/encoder_with_tensors.png" alt="带张量的编码器">
+
+<p>这里我们开始看到Transformer的一个关键特性：每个位置的词在编码器中沿着自己的路径流动。在自注意力层中，这些路径之间存在依赖关系。然而，前馈层没有这些依赖关系，因此各个路径在流经前馈层时可以并行执行。</p>
+
+<p>接下来，我们将换一个更短的句子作为例子，看看编码器每个子层中发生了什么。</p>
+
+<h2>开始编码！</h2>
+
+<p>如前所述，编码器接收一个向量列表作为输入。它通过将这些向量传入"自注意力"层，然后传入前馈神经网络来处理这个列表，最后将输出向上发送到下一个编码器。</p>
+
+<img src="https://jalammar.github.io/images/t/encoder_with_tensors_2.png" alt="编码器处理流程">
+<p class="caption">每个位置的词经过自注意力处理。然后，它们各自通过一个前馈神经网络——完全相同的网络，每个向量分别流过。</p>
+
+<h2>自注意力机制概述</h2>
+
+<p>不要被我随口说出"自注意力"这个词所迷惑，好像它是一个人人都应该熟悉的概念。我个人在阅读《Attention is All You Need》论文之前从未接触过这个概念。让我们来提炼一下它的工作原理。</p>
+
+<p>假设以下句子是我们想要翻译的输入句子：</p>
+
+<blockquote>"The animal didn't cross the street because <strong>it</strong> was too tired"<br>（那只动物没有过马路，因为<strong>它</strong>太累了）</blockquote>
+
+<p>这个句子中的"it"指的是什么？它指的是街道还是动物？对人类来说这是一个简单的问题，但对算法来说并不那么简单。</p>
+
+<p>当模型处理"it"这个词时，自注意力机制允许它将"it"与"animal"关联起来。</p>
+
+<p>当模型处理每个词（输入序列中的每个位置）时，自注意力允许它查看输入序列中的其他位置，寻找有助于更好地编码当前词的线索。</p>
+
+<p>如果你熟悉RNN，想想维护隐藏状态如何让RNN将之前处理过的词/向量的表示与当前正在处理的词结合起来。自注意力是Transformer用来将其他相关词的"理解"融入当前正在处理的词中的方法。</p>
+
+<img src="https://jalammar.github.io/images/t/transformer_self-attention_visualization.png" alt="自注意力可视化">
+<p class="caption">当我们在编码器#5（堆叠中最顶层的编码器）中编码"it"这个词时，注意力机制的一部分聚焦在"The Animal"上，并将其表示的一部分融入到"it"的编码中。</p>
+
+<p>请务必查看 <a href="https://colab.research.google.com/github/tensorflow/tensor2tensor/blob/master/tensor2tensor/notebooks/hello_t2t.ipynb">Tensor2Tensor notebook</a>，在那里你可以加载一个Transformer模型，并使用这个交互式可视化工具来检查它。</p>
+
+<h2>自注意力机制详解</h2>
+
+<p>让我们首先看看如何使用向量来计算自注意力，然后再看看它实际上是如何用矩阵实现的。</p>
+
+<p>计算自注意力的<strong>第一步</strong>是从编码器的每个输入向量（在本例中是每个词的嵌入）创建三个向量。因此，对于每个词，我们创建一个查询向量（Query）、一个键向量（Key）和一个值向量（Value）。这些向量是通过将嵌入乘以我们在训练过程中训练的三个矩阵来创建的。</p>
+
+<p>注意，这些新向量的维度比嵌入向量小。它们的维度是64，而嵌入和编码器输入/输出向量的维度是512。它们不一定要更小，这是一个架构选择，目的是使多头注意力的计算（大致上）保持恒定。</p>
+
+<img src="https://jalammar.github.io/images/t/transformer_self_attention_vectors.png" alt="自注意力向量">
+<p class="caption">将x1乘以WQ权重矩阵得到q1，即与该词关联的"查询"向量。我们最终为输入句子中的每个词创建了一个"查询"、一个"键"和一个"值"投影。</p>
+
+<blockquote>
+<strong>"查询"、"键"和"值"向量是什么？</strong><br>
+它们是对计算和思考注意力有用的抽象概念。一旦你继续阅读下面注意力的计算方式，你就会了解这些向量各自扮演的角色。
+</blockquote>
+
+<p>计算自注意力的<strong>第二步</strong>是计算分数。假设我们正在计算这个例子中第一个词"Thinking"的自注意力。我们需要将输入句子中的每个词与这个词进行评分。分数决定了当我们在某个位置编码一个词时，应该对输入句子的其他部分给予多少关注。</p>
+
+<p>分数是通过将查询向量与我们正在评分的相应词的键向量进行点积来计算的。因此，如果我们正在处理位置#1的词的自注意力，第一个分数将是q1和k1的点积。第二个分数将是q1和k2的点积。</p>
+
+<img src="https://jalammar.github.io/images/t/transformer_self_attention_score.png" alt="自注意力分数">
+
+<p><strong>第三步和第四步</strong>是将分数除以8（论文中使用的键向量维度64的平方根。这有助于获得更稳定的梯度。这里可以使用其他值，但这是默认值），然后将结果通过softmax运算。Softmax将分数归一化，使它们都为正数且总和为1。</p>
+
+<img src="https://jalammar.github.io/images/t/self-attention_softmax.png" alt="Softmax">
+
+<p>这个softmax分数决定了每个词在这个位置上的表达程度。显然，当前位置的词将具有最高的softmax分数，但有时关注与当前词相关的另一个词也是有用的。</p>
+
+<p><strong>第五步</strong>是将每个值向量乘以softmax分数（为求和做准备）。这里的直觉是保持我们想要关注的词的值不变，而淹没不相关的词（通过将它们乘以像0.001这样的微小数字）。</p>
+
+<p><strong>第六步</strong>是将加权后的值向量求和。这就产生了该位置（第一个词）的自注意力层的输出。</p>
+
+<img src="https://jalammar.github.io/images/t/self-attention-output.png" alt="自注意力输出">
+
+<p>这就是自注意力计算的全部过程。得到的向量可以发送到前馈神经网络。然而，在实际实现中，这个计算是以矩阵形式完成的，以便更快地处理。现在我们已经了解了词级别计算的直觉，让我们来看看矩阵形式。</p>
+
+<h2>自注意力的矩阵计算</h2>
+
+<p><strong>第一步</strong>是计算查询、键和值矩阵。我们通过将嵌入打包成矩阵X，然后乘以我们训练好的权重矩阵（WQ、WK、WV）来实现。</p>
+
+<img src="https://jalammar.github.io/images/t/self-attention-matrix-calculation.png" alt="自注意力矩阵计算">
+<p class="caption">X矩阵中的每一行对应输入句子中的一个词。我们再次看到嵌入向量（512，或图中的4个方框）和q/k/v向量（64，或图中的3个方框）之间的大小差异。</p>
+
+<p><strong>最后</strong>，由于我们处理的是矩阵，我们可以将第二步到第六步浓缩为一个公式来计算自注意力层的输出。</p>
+
+<img src="https://jalammar.github.io/images/t/self-attention-matrix-calculation-2.png" alt="自注意力矩阵公式">
+<p class="caption">矩阵形式的自注意力计算</p>
+
+<h2>多头注意力</h2>
+
+<p>论文通过添加一种称为"多头"注意力的机制进一步改进了自注意力层。这从两个方面提高了注意力层的性能：</p>
+
+<ol>
+    <li>它扩展了模型关注不同位置的能力。是的，在上面的例子中，z1包含了其他每个编码的一小部分，但它可能被实际的词本身所主导。如果我们翻译像"The animal didn't cross the street because it was too tired"这样的句子，知道"it"指的是哪个词会很有用。</li>
+    <li>它为注意力层提供了多个"表示子空间"。正如我们接下来将看到的，使用多头注意力，我们不仅有一组，而是有多组查询/键/值权重矩阵（Transformer使用八个注意力头，因此每个编码器/解码器最终有八组）。每组都是随机初始化的。然后，在训练之后，每组用于将输入嵌入（或来自较低编码器/解码器的向量）投影到不同的表示子空间中。</li>
+</ol>
+
+<img src="https://jalammar.github.io/images/t/transformer_attention_heads_qkv.png" alt="多头注意力QKV">
+<p class="caption">使用多头注意力，我们为每个头维护单独的Q/K/V权重矩阵，从而产生不同的Q/K/V矩阵。和之前一样，我们将X乘以WQ/WK/WV矩阵来生成Q/K/V矩阵。</p>
+
+<p>如果我们执行上面概述的相同自注意力计算，只是用不同的权重矩阵做八次，我们最终会得到八个不同的Z矩阵。</p>
+
+<img src="https://jalammar.github.io/images/t/transformer_attention_heads_z.png" alt="八个Z矩阵">
+
+<p>这给我们带来了一个小挑战。前馈层不期望接收八个矩阵——它期望的是一个单一矩阵（每个词一个向量）。所以我们需要一种方法将这八个矩阵压缩为一个矩阵。</p>
+
+<p>怎么做呢？我们将这些矩阵拼接起来，然后乘以一个额外的权重矩阵WO。</p>
+
+<img src="https://jalammar.github.io/images/t/transformer_attention_heads_weight_matrix_o.png" alt="WO矩阵">
+
+<p>这基本上就是多头自注意力的全部内容了。确实涉及不少矩阵。让我试着把它们都放在一张图中，这样我们可以一目了然。</p>
+
+<img src="https://jalammar.github.io/images/t/transformer_multi-headed_self-attention-recap.png" alt="多头自注意力总结">
+
+<p>现在我们已经接触了注意力头，让我们重新审视之前的例子，看看在编码"it"这个词时，不同的注意力头关注的是什么：</p>
+
+<img src="https://jalammar.github.io/images/t/transformer_self-attention_visualization_2.png" alt="注意力头可视化">
+<p class="caption">当我们编码"it"这个词时，一个注意力头主要关注"the animal"，而另一个关注"tired"——从某种意义上说，模型对"it"这个词的表示融入了"animal"和"tired"的部分表示。</p>
+
+<p>然而，如果我们把所有注意力头都加到图中，事情可能会更难解读：</p>
+
+<img src="https://jalammar.github.io/images/t/transformer_self-attention_visualization_3.png" alt="所有注意力头">
+
+<h2>使用位置编码表示序列顺序</h2>
+
+<p>到目前为止我们描述的模型中缺少的一个东西是：一种考虑输入序列中词的顺序的方法。</p>
+
+<p>为了解决这个问题，Transformer向每个输入嵌入添加一个向量。这些向量遵循模型学习到的特定模式，帮助它确定每个词的位置，或序列中不同词之间的距离。这里的直觉是，将这些值添加到嵌入中，可以在嵌入向量被投影到Q/K/V向量以及在点积注意力计算过程中，提供有意义的距离信息。</p>
+
+<img src="https://jalammar.github.io/images/t/transformer_positional_encoding_vectors.png" alt="位置编码向量">
+<p class="caption">为了让模型感知词的顺序，我们添加位置编码向量——其值遵循特定的模式。</p>
+
+<p>如果我们假设嵌入的维度为4，实际的位置编码看起来像这样：</p>
+
+<img src="https://jalammar.github.io/images/t/transformer_positional_encoding_example.png" alt="位置编码示例">
+<p class="caption">一个嵌入大小为4的位置编码真实示例</p>
+
+<p>这个模式可能是什么样的？</p>
+
+<p>在下图中，每一行对应一个向量的位置编码。因此第一行将是我们添加到输入序列中第一个词的嵌入上的向量。每行包含512个值——每个值在1和-1之间。我们对它们进行了颜色编码，使模式可见。</p>
+
+<img src="https://jalammar.github.io/images/t/transformer_positional_encoding_large_example.png" alt="位置编码大示例">
+<p class="caption">20个词（行）、嵌入大小为512（列）的位置编码真实示例。你可以看到它在中间似乎被分成了两半。这是因为左半部分的值由一个函数（使用正弦）生成，右半部分由另一个函数（使用余弦）生成。然后将它们拼接起来形成每个位置编码向量。</p>
+
+<p>位置编码的公式在论文的第3.5节中描述。你可以在 <a href="https://github.com/tensorflow/tensor2tensor/blob/23bd23b9830059fbc349381b70d9429b5c40a139/tensor2tensor/layers/common_attention.py">get_timing_signal_1d()</a> 中查看生成位置编码的代码。这不是位置编码的唯一可能方法。但它的优势在于能够扩展到未见过长度的序列（例如，如果我们训练好的模型被要求翻译一个比训练集中任何句子都长的句子）。</p>
+
+<div class="note">
+<strong>2020年7月更新：</strong>上面显示的位置编码来自Tensor2Tensor的Transformer实现。论文中展示的方法略有不同，它不是直接拼接，而是交织两个信号。下图展示了它的样子。<a href="https://github.com/jalammar/jalammar.github.io/blob/master/notebookes/transformer/transformer_positional_encoding_graph.ipynb">这里是生成它的代码</a>。
+</div>
+
+<img src="https://jalammar.github.io/images/t/attention-is-all-you-need-positional-encoding.png" alt="论文中的位置编码">
+
+<h2>残差连接</h2>
+
+<p>在继续之前，我们需要提到编码器架构中的一个细节：每个编码器中的每个子层（自注意力、前馈神经网络）都有一个围绕它的残差连接，之后是一个<a href="https://arxiv.org/abs/1607.06450">层归一化</a>步骤。</p>
+
+<img src="https://jalammar.github.io/images/t/transformer_resideual_layer_norm.png" alt="残差连接和层归一化">
+
+<p>如果我们可视化与自注意力相关的向量和层归一化操作，它看起来像这样：</p>
+
+<img src="https://jalammar.github.io/images/t/transformer_resideual_layer_norm_2.png" alt="残差连接可视化">
+
+<p>这同样适用于解码器的子层。如果我们考虑一个由2个堆叠的编码器和解码器组成的Transformer，它看起来大概是这样的：</p>
+
+<img src="https://jalammar.github.io/images/t/transformer_resideual_layer_norm_3.png" alt="完整残差连接">
+
+<h2>解码器端</h2>
+
+<p>现在我们已经涵盖了编码器端的大部分概念，我们基本上也知道解码器的组件是如何工作的了。但让我们看看它们是如何协同工作的。</p>
+
+<p>编码器首先处理输入序列。顶层编码器的输出随后被转换为一组注意力向量K和V。这些将被每个解码器在其"编码器-解码器注意力"层中使用，帮助解码器关注输入序列中的适当位置：</p>
+
+<img src="https://jalammar.github.io/images/t/transformer_decoding_1.gif" alt="解码过程1">
+<p class="caption">完成编码阶段后，我们开始解码阶段。解码阶段的每一步都从输出序列中输出一个元素（在本例中是英语翻译句子）。</p>
+
+<p>以下步骤重复这个过程，直到到达一个特殊的结束符号，表示Transformer解码器已完成其输出。每一步的输出在下一个时间步被送入最底层的解码器，解码器像编码器一样逐层向上传递解码结果。就像我们对编码器输入所做的那样，我们对解码器输入进行嵌入并添加位置编码，以指示每个词的位置。</p>
+
+<img src="https://jalammar.github.io/images/t/transformer_decoding_2.gif" alt="解码过程2">
+
+<p>解码器中的自注意力层与编码器中的工作方式略有不同：</p>
+
+<p>在解码器中，自注意力层只允许关注输出序列中较早的位置。这是通过在自注意力计算的softmax步骤之前屏蔽未来位置（将它们设置为<code>-inf</code>）来实现的。</p>
+
+<p>"编码器-解码器注意力"层的工作方式与多头自注意力类似，只是它从下面的层创建查询矩阵，而从编码器堆叠的输出获取键和值矩阵。</p>
+
+<h2>最终的线性层和Softmax层</h2>
+
+<p>解码器堆叠输出一个浮点数向量。我们如何将其转换为一个词？这就是最终线性层的工作，之后是一个Softmax层。</p>
+
+<p>线性层是一个简单的全连接神经网络，它将解码器堆叠产生的向量投影到一个更大的向量中，称为logits向量。</p>
+
+<p>假设我们的模型知道10,000个唯一的英语单词（模型的"输出词汇表"），这些是从训练数据集中学到的。这将使logits向量宽度为10,000个单元——每个单元对应一个唯一单词的分数。这就是我们如何解释线性层之后模型的输出。</p>
+
+<p>然后softmax层将这些分数转换为概率（全部为正数，总和为1.0）。选择概率最高的单元，与之关联的词作为该时间步的输出。</p>
+
+<img src="https://jalammar.github.io/images/t/transformer_decoder_output_softmax.png" alt="解码器输出softmax">
+<p class="caption">这张图从底部开始，展示了解码器堆叠输出的向量。然后它被转换为一个输出词。</p>
+
+<h2>训练回顾</h2>
+
+<p>现在我们已经涵盖了通过训练好的Transformer的整个前向传播过程，了解一下训练模型的直觉会很有用。</p>
+
+<p>在训练期间，未训练的模型会经历完全相同的前向传播。但由于我们是在标注的训练数据集上训练它，我们可以将其输出与实际正确的输出进行比较。</p>
+
+<p>为了可视化这一点，假设我们的输出词汇表只包含六个词（"a"、"am"、"i"、"thanks"、"student"和"&lt;eos&gt;"（"end of sentence"的缩写））。</p>
+
+<img src="https://jalammar.github.io/images/t/vocabulary.png" alt="词汇表">
+<p class="caption">我们模型的输出词汇表是在训练开始之前的预处理阶段创建的。</p>
+
+<p>一旦定义了输出词汇表，我们就可以使用相同宽度的向量来表示词汇表中的每个词。这也被称为独热编码（one-hot encoding）。例如，我们可以使用以下向量来表示"am"这个词：</p>
+
+<img src="https://jalammar.github.io/images/t/one-hot-vocabulary-example.png" alt="独热编码示例">
+<p class="caption">示例：输出词汇表的独热编码</p>
+
+<p>在这个回顾之后，让我们讨论模型的损失函数——我们在训练阶段优化的指标，以期得到一个训练好的、希望是非常准确的模型。</p>
+
+<h2>损失函数</h2>
+
+<p>假设我们正在训练模型。假设这是训练阶段的第一步，我们正在用一个简单的例子来训练它——将"merci"翻译成"thanks"。</p>
+
+<p>这意味着我们希望输出是一个指示"thanks"这个词的概率分布。但由于这个模型还没有训练过，这不太可能马上发生。</p>
+
+<img src="https://jalammar.github.io/images/t/transformer_logits_output_and_label.png" alt="Logits输出和标签">
+<p class="caption">由于模型的参数（权重）都是随机初始化的，（未训练的）模型为每个单元/词产生具有任意值的概率分布。我们可以将其与实际输出进行比较，然后使用反向传播调整模型的所有权重，使输出更接近期望的输出。</p>
+
+<p>如何比较两个概率分布？我们简单地将一个减去另一个。更多细节请参阅<a href="https://colah.github.io/posts/2015-09-Visual-Information/">交叉熵</a>和<a href="https://www.countbayesie.com/blog/2017/5/9/kullback-leibler-divergence-explained">KL散度</a>。</p>
+
+<p>但请注意，这是一个过于简化的例子。更现实地说，我们会使用比一个词更长的句子。例如——输入："je suis étudiant"，期望输出："i am a student"。这实际上意味着我们希望模型连续输出概率分布，其中：</p>
+
+<ul>
+    <li>每个概率分布由一个宽度为vocab_size的向量表示（在我们的玩具示例中为6，但更现实的数字是30,000或50,000）</li>
+    <li>第一个概率分布在与"i"关联的单元处具有最高概率</li>
+    <li>第二个概率分布在与"am"关联的单元处具有最高概率</li>
+    <li>依此类推，直到第五个输出分布指示"&lt;end of sentence&gt;"符号，该符号在10,000个元素的词汇表中也有一个与之关联的单元</li>
+</ul>
+
+<img src="https://jalammar.github.io/images/t/output_target_probability_distributions.png" alt="目标概率分布">
+<p class="caption">我们将在训练示例中针对一个样本句子训练模型的目标概率分布。</p>
+
+<p>在足够大的数据集上训练模型足够长的时间后，我们希望产生的概率分布看起来像这样：</p>
+
+<img src="https://jalammar.github.io/images/t/output_trained_model_probability_distributions.png" alt="训练后的概率分布">
+<p class="caption">希望在训练后，模型能输出我们期望的正确翻译。当然，如果这个短语是训练数据集的一部分，这并不能真正说明什么（参见：<a href="https://www.youtube.com/watch?v=TIgfjmp-4BA">交叉验证</a>）。注意，即使某个位置不太可能是该时间步的输出，它也会获得一点概率——这是softmax的一个非常有用的特性，有助于训练过程。</p>
+
+<p>现在，由于模型一次产生一个输出，我们可以假设模型从概率分布中选择概率最高的词，丢弃其余的。这是一种方法（称为贪婪解码）。另一种方法是保留前两个词（比如"I"和"a"），然后在下一步运行模型两次：一次假设第一个输出位置是"I"，另一次假设第一个输出位置是"a"，保留在位置#1和#2上产生较少错误的版本。我们对位置#2和#3重复此过程……以此类推。这种方法称为"束搜索"（beam search），在我们的例子中，beam_size为2（意味着始终在内存中保留两个部分假设（未完成的翻译）），top_beams也为2（意味着我们将返回两个翻译）。这些都是可以实验的超参数。</p>
+
+<h2>继续前进，去变换吧</h2>
+
+<p>我希望你觉得这是一个有用的起点，可以帮助你打破对Transformer主要概念的陌生感。如果你想深入了解，我建议以下步骤：</p>
+
+<ul>
+    <li>阅读 <a href="https://arxiv.org/abs/1706.03762">《Attention Is All You Need》</a> 论文、Transformer博客文章（<a href="https://ai.googleblog.com/2017/08/transformer-novel-neural-network.html">Transformer: A Novel Neural Network Architecture for Language Understanding</a>）和 <a href="https://ai.googleblog.com/2017/06/accelerating-deep-learning-research.html">Tensor2Tensor公告</a></li>
+    <li>观看 <a href="https://www.youtube.com/watch?v=rBCqOTEfxvg">Łukasz Kaiser的演讲</a>，详细介绍模型及其细节</li>
+    <li>使用 <a href="https://colab.research.google.com/github/tensorflow/tensor2tensor/blob/master/tensor2tensor/notebooks/hello_t2t.ipynb">Tensor2Tensor仓库提供的Jupyter Notebook</a> 进行实验</li>
+    <li>探索 <a href="https://github.com/tensorflow/tensor2tensor">Tensor2Tensor仓库</a></li>
+</ul>
+
+<p>后续工作：</p>
+<ul>
+    <li><a href="https://arxiv.org/abs/1706.03059">Depthwise Separable Convolutions for Neural Machine Translation</a></li>
+    <li><a href="https://arxiv.org/abs/1706.05137">One Model To Learn Them All</a></li>
+    <li><a href="https://arxiv.org/abs/1801.09797">Discrete Autoencoders for Sequence Models</a></li>
+    <li><a href="https://arxiv.org/abs/1801.10198">Generating Wikipedia by Summarizing Long Sequences</a></li>
+    <li><a href="https://arxiv.org/abs/1802.05751">Image Transformer</a></li>
+    <li><a href="https://arxiv.org/abs/1804.00247">Training Tips for the Transformer Model</a></li>
+    <li><a href="https://arxiv.org/abs/1803.02155">Self-Attention with Relative Position Representations</a></li>
+    <li><a href="https://arxiv.org/abs/1803.03382">Fast Decoding in Sequence Models using Discrete Latent Variables</a></li>
+    <li><a href="https://arxiv.org/abs/1804.04235">Adafactor: Adaptive Learning Rates with Sublinear Memory Cost</a></li>
+</ul>
+
+<h2>致谢</h2>
+
+<p>感谢 <a href="https://twitter.com/ilblackdragon">Illia Polosukhin</a>、<a href="http://jakob.uszkoreit.net/">Jakob Uszkoreit</a>、<a href="https://www.linkedin.com/in/llion-jones-9ab3064b">Llion Jones</a>、<a href="https://ai.google/research/people/LukaszKaiser">Lukasz Kaiser</a>、<a href="https://twitter.com/nikiparmar09">Niki Parmar</a> 和 <a href="https://dblp.org/pers/hd/s/Shazeer:Noam">Noam Shazeer</a> 对本文早期版本提供的反馈。</p>
+
+<div class="source-note">
+<p>本文翻译自 Jay Alammar 的 <a href="https://jalammar.github.io/illustrated-transformer/">The Illustrated Transformer</a>。原文图片直接引用自原站。内容经过意译以符合中文阅读习惯。</p>
+</div>
+
+</body>
+</html>

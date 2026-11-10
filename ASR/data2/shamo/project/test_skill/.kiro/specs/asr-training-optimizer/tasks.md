@@ -1,0 +1,492 @@
+# 实现计划：ASR训练优化系统
+
+## 概览
+
+本实现计划将ASR训练优化系统的设计分解为可执行的编码任务。系统采用"Python 脚本 + Kiro Skill"双层架构，Python 脚本负责数据采集、指标计算、统计分析等确定性操作，Kiro Skill 文件提供智能决策能力。任务按模块组织，从基础设施到核心功能到集成测试，确保每个任务增量构建在前一个任务之上。
+
+## 运行环境要求
+
+**所有 Python 脚本和测试必须在 `workspace/.venv` 虚拟环境下执行。** 具体要求：
+
+- 使用 `workspace/.venv/bin/python` 运行 Python 脚本
+- 使用 `workspace/.venv/bin/pip` 安装依赖
+- 使用 `workspace/.venv/bin/pytest` 运行测试
+- 所有 CLI 脚本调用格式：`workspace/.venv/bin/python scripts/xxx.py [args]`
+- 依赖安装示例：`workspace/.venv/bin/pip install pytest hypothesis pyyaml numpy scipy librosa soundfile matplotlib plotly`
+
+## 任务列表
+
+- [x] 1. 项目基础设施搭建
+  - [x] 1.1 创建项目目录结构和核心数据模型
+    - 创建 `workspace/` 下的完整目录结构：`scripts/`、`configs/model/`、`configs/training/`、`configs/augmentation/`、`configs/post_process/`、`data/original/`、`data/augmented/`、`data/musan/`、`models/baseline/`、`models/iterations/`、`logs/training/`、`logs/optimization/`、`reports/evaluation/`、`reports/dataset/`、`knowledge/skill_versions/`
+    - 创建 `scripts/models.py`，定义所有核心数据类：`TrainingMetrics`、`TrainingAlert`、`AlertType`、`SceneMetrics`、`ErrorType`、`BadCase`、`EvaluationReport`、`DatasetStats`、`TextStats`、`AnomalySample`、`SceneDistribution`、`DatasetQualityReport`、`OptimizationSuggestion`、`OptimizationPlan`、`OptimizationLog`、`ModelConfig`、`TrainingConfig`、`LRScheduleType`、`ParamHistory`、`AugmentationType`、`AugmentationConfig`、`AugmentationReport`、`SamplingStrategy`、`HotwordEntry`、`RegexRule`、`PostProcessConfig`、`PostProcessResult`、`IterationRecord`、`EffectFeedback`、`KnowledgeEntry`、`StrategyWeight`、`SkillVersion`
+    - _需求: 全部需求模块的数据基础_
+  - [x] 1.2 搭建SQLite数据库初始化和迁移模块
+    - 创建 `scripts/database.py`，实现 SQLite 数据库初始化，包含 `iterations`、`effect_feedbacks`、`knowledge_entries`、`skill_versions`、`strategy_weights`、`param_history` 六张表的建表逻辑
+    - 实现数据库连接管理、基本 CRUD 操作封装
+    - _需求: 9.1, 10.1, 10.5, 10.7_
+  - [x] 1.3 搭建配置文件读写工具模块
+    - 创建 `scripts/config_utils.py`，实现 YAML 配置文件的读写功能（模型配置、训练配置、后处理配置）
+    - 实现配置版本化存储（自动递增版本号，如 `v001_model.yaml`、`v002_model.yaml`）
+    - 实现 JSON/JSONL 文件的读写工具函数
+    - _需求: 5.1, 5.2, 5.3, 6.1, 6.4_
+  - [x] 1.4 搭建测试框架和公共测试工具
+    - 配置 `pytest` 和 `Hypothesis` 测试框架
+    - 创建 `tests/conftest.py`，定义公共 fixtures（临时目录、示例数据生成器、数据库 fixture）
+    - 创建 `tests/strategies.py`，定义 Hypothesis 自定义策略（生成 TrainingMetrics、BadCase、SceneMetrics 等数据类的策略）
+    - _需求: 全部需求模块的测试基础_
+
+- [x] 2. Training_Monitor 训练监控模块
+  - [x] 2.1 实现训练指标采集和epoch指标计算
+    - 创建 `scripts/training_monitor.py`，实现 `TrainingMonitor` 类
+    - 实现 `collect_metrics()` 方法：每隔指定步数采集训练指标（loss、学习率、梯度范数），存储到内存和 JSONL 文件
+    - 实现 `compute_epoch_metrics()` 方法：计算指定 epoch 的平均 CER 和 WER
+    - _需求: 1.1, 1.2_
+  - [ ]* 2.2 编写属性测试：Epoch平均指标计算正确性
+    - **Property 1: Epoch平均指标计算正确性**
+    - 对任意非空 TrainingMetrics 列表，验证 compute_epoch_metrics 返回的平均 CER/WER 等于算术平均值
+    - **验证: 需求 1.2**
+  - [x] 2.3 实现训练停滞检测和数值异常检测
+    - 实现 `check_stagnation()` 方法：检测连续 N 个 epoch loss 未下降超过阈值，生成 `STAGNATION` 类型告警
+    - 实现 `check_numerical_anomaly()` 方法：检测 NaN/Inf 值，生成 `NAN_INF` 类型告警
+    - _需求: 1.4, 1.5_
+  - [ ]* 2.4 编写属性测试：训练停滞检测正确性
+    - **Property 2: 训练停滞检测正确性**
+    - 对任意 loss 序列和阈值，验证当且仅当连续 5 个 epoch loss 下降量均小于阈值时返回告警
+    - **验证: 需求 1.4**
+  - [ ]* 2.5 编写属性测试：数值异常检测正确性
+    - **Property 3: 数值异常与早期loss异常检测**
+    - 对任意 float 值，验证 NaN/Inf 返回告警，有限正常值不返回告警
+    - **验证: 需求 1.5, 6.5**
+  - [x] 2.6 实现训练曲线数据获取
+    - 实现 `get_training_curves()` 方法：返回 loss 曲线、CER/WER 变化曲线和学习率调度曲线数据
+    - _需求: 1.3_
+  - [x] 2.7 创建训练指标采集CLI脚本
+    - 创建 `scripts/collect_metrics.py` CLI 入口，支持 `--log-dir` 参数，输出结构化 JSON 格式的训练指标数据
+    - _需求: 1.1, 1.2, 1.3_
+
+- [x] 3. Result_Analyzer 训练结果分析模块
+  - [x] 3.1 实现模型评估和按场景分组计算
+    - 创建 `scripts/result_analyzer.py`，实现 `ResultAnalyzer` 类
+    - 实现 `evaluate_model()` 方法：在测试集上计算整体 CER/WER，按场景类型（纯净语音、背景人声、背景噪声）分别计算 CER/WER
+    - _需求: 2.1, 2.2_
+  - [ ]* 3.2 编写属性测试：按场景分组CER/WER计算正确性
+    - **Property 4: 按场景分组CER/WER计算正确性**
+    - 对任意带场景标签的评估结果列表，验证按场景分组后的 CER/WER 等于该场景下所有样本的加权平均值
+    - **验证: 需求 2.2**
+  - [x] 3.3 实现Badcase生成和错误类型分类
+    - 实现 `generate_badcases()` 方法：根据 CER 阈值筛选 badcase，包含音频路径、参考文本、识别文本、错误详情
+    - 实现 `classify_errors()` 方法：基于编辑距离算法将错误分类为替换、插入、删除三种类型
+    - _需求: 2.3, 2.5_
+  - [ ]* 3.4 编写属性测试：Badcase过滤完备性
+    - **Property 5: Badcase过滤完备性**
+    - 对任意评估结果列表和 CER 阈值，验证返回列表中每个样本 CER 都大于阈值，且所有超阈值样本都被包含
+    - **验证: 需求 2.3**
+  - [ ]* 3.5 编写属性测试：错误类型分类一致性
+    - **Property 6: 错误类型分类一致性**
+    - 对任意参考文本和识别文本对，验证替换+插入+删除错误数等于编辑距离，且每个错误被唯一分类
+    - **验证: 需求 2.5**
+  - [x] 3.6 实现基线模型对比功能
+    - 实现 `compare_with_baseline()` 方法：对比当前模型与基线模型在各场景下的 CER/WER 差异
+    - _需求: 2.4_
+  - [ ]* 3.7 编写属性测试：评估报告对比正确性
+    - **Property 7: 评估报告对比正确性**
+    - 对任意两个包含相同场景类型的 EvaluationReport，验证各场景 CER/WER 差值计算正确
+    - **验证: 需求 2.4, 9.2**
+  - [x] 3.8 创建结果分析CLI脚本
+    - 创建 `scripts/analyze_results.py` CLI 入口，支持 `--model-path` 和 `--test-set` 参数，输出结构化 JSON 格式的评估报告
+    - _需求: 2.1, 2.2, 2.3, 2.4, 2.5_
+
+- [x] 4. 检查点 - 确保所有测试通过
+  - 确保所有测试通过，如有问题请询问用户。
+
+- [x] 5. Dataset_Analyzer 数据集分析模块
+  - [x] 5.1 实现数据集基本统计和SNR分析
+    - 创建 `scripts/dataset_analyzer.py`，实现 `DatasetAnalyzer` 类
+    - 实现 `analyze_basic_stats()` 方法：统计总样本数、总时长、平均时长、时长分布
+    - 实现 `analyze_snr()` 方法：分析 SNR 分布，标记低于阈值的低质量样本
+    - _需求: 3.1, 3.2_
+  - [ ]* 5.2 编写属性测试：SNR阈值过滤双向完备性
+    - **Property 8: SNR阈值过滤双向完备性**
+    - 对任意样本 SNR 值列表和阈值，验证过滤操作的双向完备性（低质量样本 SNR 确实低于阈值，所有低于阈值的样本都被标记）
+    - **验证: 需求 3.2, 7.2**
+  - [x] 5.3 实现文本标注统计分析
+    - 实现 `analyze_text()` 方法：统计字符分布、词频分布和句子长度分布
+    - _需求: 3.3_
+  - [ ]* 5.4 编写属性测试：文本统计守恒性
+    - **Property 9: 文本统计守恒性**
+    - 对任意非空文本列表，验证字符分布中所有字符计数之和等于总字符数，词频之和等于总词数
+    - **验证: 需求 3.3**
+  - [x] 5.5 实现异常样本检测
+    - 实现 `detect_anomalies()` 方法：检测空标注、标注与音频时长不匹配、音频文件损坏等异常
+    - _需求: 3.4_
+  - [ ]* 5.6 编写属性测试：异常样本检测正确性
+    - **Property 10: 异常样本检测正确性**
+    - 对任意样本元数据集合，验证空标注被标记为 "empty_label"，字符数与时长比值超出范围的被标记为 "duration_mismatch"
+    - **验证: 需求 3.4**
+  - [x] 5.7 实现场景分布统计和数据质量报告生成
+    - 实现 `analyze_scene_distribution()` 方法：统计各场景样本数量和占比，识别样本不足的场景
+    - 实现 `generate_quality_report()` 方法：汇总所有问题并按严重程度排序
+    - _需求: 3.5, 3.6_
+  - [ ]* 5.8 编写属性测试：场景分布统计与不足识别
+    - **Property 11: 场景分布统计与不足识别**
+    - 对任意带场景标签的样本列表，验证各场景样本数之和等于总样本数，占比之和等于 1.0，underrepresented_scenes 中每个场景样本数小于阈值
+    - **验证: 需求 3.5**
+  - [ ]* 5.9 编写属性测试：问题严重程度排序
+    - **Property 12: 问题严重程度排序**
+    - 对任意数据质量报告中的问题列表，验证 issues_by_severity 按严重程度降序排列
+    - **验证: 需求 3.6**
+  - [x] 5.10 创建数据集分析CLI脚本
+    - 创建 `scripts/analyze_dataset.py` CLI 入口，支持 `--dataset-path` 参数，输出结构化 JSON 格式的数据质量报告
+    - _需求: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6_
+
+- [x] 6. 检查点 - 确保所有测试通过
+  - 确保所有测试通过，如有问题请询问用户。
+
+- [x] 7. LLM_Skill_Engine 智能决策引擎模块
+  - [x] 7.1 实现分析数据准备功能
+    - 创建 `scripts/llm_skill_engine.py`，实现 `LLMSkillEngine` 类
+    - 实现 `prepare_training_analysis_data()` 方法：将训练指标和告警数据转换为结构化 JSON 供 Kiro 读取
+    - 实现 `prepare_badcase_analysis_data()` 方法：将 badcase 和错误分布数据转换为结构化 JSON
+    - 实现 `prepare_data_quality_analysis()` 方法：将数据质量报告转换为结构化 JSON
+    - 实现 `prepare_comprehensive_analysis()` 方法：综合三方面数据生成完整分析 JSON
+    - _需求: 4.1, 4.2, 4.3, 4.4_
+  - [x] 7.2 实现优化方案解析和可执行配置生成
+    - 实现 `parse_optimization_plan()` 方法：解析 Kiro 生成的优化方案文本为结构化 `OptimizationPlan`
+    - 实现 `generate_executable_config()` 方法：将 `OptimizationSuggestion` 转化为可执行配置变更
+    - _需求: 4.5, 4.6_
+  - [ ]* 7.3 编写属性测试：优化方案四维度覆盖
+    - **Property 13: 优化方案四维度覆盖**
+    - 对任意生成的 OptimizationPlan，验证 suggestions 列表中至少包含 "model"、"param"、"data"、"post_process" 四个维度
+    - **验证: 需求 4.4**
+  - [x] 7.4 创建Kiro Steering文件
+    - 创建 `.kiro/steering/asr-optimization-workflow.md`：优化闭环工作流引导，定义完整的分析→建议→执行流程
+    - 创建 `.kiro/steering/training-analysis-guide.md`：训练过程分析指南
+    - 创建 `.kiro/steering/badcase-analysis-guide.md`：Badcase分析指南
+    - 创建 `.kiro/steering/data-quality-guide.md`：数据质量分析指南
+    - _需求: 4.1, 4.2, 4.3_
+  - [x] 7.5 创建Kiro Skills文件
+    - 创建 `.kiro/skills/asr-training-diagnostics.md`：训练诊断能力，包含训练停滞诊断、背景人声场景专项诊断等分析规则
+    - 创建 `.kiro/skills/asr-badcase-analysis.md`：Badcase模式识别能力
+    - 创建 `.kiro/skills/asr-data-optimization.md`：数据优化策略能力
+    - 创建 `.kiro/skills/asr-model-tuning.md`：模型调优建议能力
+    - 创建 `.kiro/skills/asr-postprocess-rules.md`：后处理规则生成能力
+    - _需求: 4.1, 4.2, 4.3, 4.4_
+
+- [x] 8. Model_Optimizer 模型结构优化模块
+  - [x] 8.1 实现模型配置管理和验证
+    - 创建 `scripts/model_optimizer.py`，实现 `ModelOptimizer` 类
+    - 实现 `apply_attention_config()` 方法：调整注意力头数和隐藏层维度
+    - 实现 `add_speech_enhance_module()` 方法：添加语音增强前端模块配置
+    - 实现 `adjust_seaco_params()` 方法：调整 SeACo 模块参数
+    - 实现 `validate_config()` 方法：验证配置合法性（注意力头数整除隐藏层维度、维度为正整数、SeACo 参数在有效范围内）
+    - _需求: 5.1, 5.2, 5.3, 5.4_
+  - [ ]* 8.2 编写属性测试：模型配置合法性验证
+    - **Property 14: 模型配置合法性验证**
+    - 对任意 ModelConfig，验证 validate_config 对合法配置返回 True，对不合法配置返回 False
+    - **验证: 需求 5.4**
+  - [x] 8.3 实现模型配置回滚功能
+    - 实现 `rollback()` 方法：回滚到上一个有效配置
+    - 实现配置变更历史记录，支持多级回滚
+    - _需求: 5.5_
+  - [ ]* 8.4 编写属性测试：模型配置回滚恢复
+    - **Property 15: 模型配置回滚恢复**
+    - 对任意合法初始 ModelConfig 和一个导致验证失败的变更，验证 rollback 返回与初始状态完全相同的配置
+    - **验证: 需求 5.5**
+  - [x] 8.5 创建模型配置变更CLI脚本
+    - 创建 `scripts/apply_model_config.py` CLI 入口，支持应用模型配置变更、验证和回滚操作
+    - _需求: 5.1, 5.2, 5.3, 5.4, 5.5_
+
+- [x] 9. Param_Tuner 训练参数调优模块
+  - [x] 9.1 实现训练参数配置生成和应用
+    - 创建 `scripts/param_tuner.py`，实现 `ParamTuner` 类
+    - 实现 `generate_config()` 方法：根据优化建议生成新的 TrainingConfig（学习率、batch size、warmup 步数、权重衰减、学习率调度策略）
+    - 实现 `apply_config()` 方法：将配置保存为版本化 YAML 文件并应用到训练流程
+    - 支持 warmup-decay、cosine annealing、step decay 三种学习率调度策略
+    - _需求: 6.1, 6.2, 6.3_
+  - [ ]* 9.2 编写属性测试：训练参数配置持久化round-trip
+    - **Property 16: 训练参数配置持久化round-trip**
+    - 对任意有效 TrainingConfig，验证保存到文件后再读取得到的配置与原始配置完全相等
+    - **验证: 需求 6.4**
+  - [x] 9.3 实现早期异常检测和参数回滚
+    - 实现 `check_early_anomaly()` 方法：检测前 100 步是否出现 loss 异常（NaN/Inf 或异常增长）
+    - 实现 `rollback()` 方法：回滚到上一组有效参数
+    - 实现 `get_param_history()` 方法：获取参数历史记录
+    - _需求: 6.4, 6.5_
+  - [x] 9.4 创建训练参数变更CLI脚本
+    - 创建 `scripts/apply_training_config.py` CLI 入口，支持应用训练参数配置、查看历史和回滚操作
+    - _需求: 6.1, 6.2, 6.3, 6.4, 6.5_
+
+- [x] 10. 检查点 - 确保所有测试通过
+  - 确保所有测试通过，如有问题请询问用户。
+
+- [x] 11. Data_Pipeline 数据流优化模块
+  - [x] 11.1 实现数据增强功能
+    - 创建 `scripts/data_pipeline.py`，实现 `DataPipeline` 类
+    - 实现 `augment()` 方法：支持添加背景人声噪声、调整语速、调整音量、混响添加四种增强方式
+    - 实现 `generate_scene_samples()` 方法：为特定场景生成增强样本
+    - 确保增强数据存储在独立目录（`data/augmented/`），原始数据不被修改
+    - _需求: 7.1, 7.3, 7.6_
+  - [ ]* 11.2 编写属性测试：数据增强不修改原始数据
+    - **Property 18: 数据增强不修改原始数据**
+    - 对任意数据增强操作，验证增强前后原始数据目录中所有文件内容保持不变
+    - **验证: 需求 7.6**
+  - [x] 11.3 实现SNR过滤和动态采样策略
+    - 实现 `filter_by_snr()` 方法：基于 SNR 阈值过滤低质量样本
+    - 实现 `update_sampling_strategy()` 方法：根据模型在各场景下的表现自动调整采样权重（CER 更高的场景获得更高权重）
+    - _需求: 7.2, 7.4_
+  - [ ]* 11.4 编写属性测试：动态采样权重与场景表现反相关
+    - **Property 17: 动态采样权重与场景表现反相关**
+    - 对任意包含至少两个场景的 SceneMetrics 列表，验证 CER 更高的场景获得不低于 CER 更低场景的采样权重
+    - **验证: 需求 7.4**
+  - [x] 11.5 实现增强报告生成
+    - 实现增强报告生成功能：包括增强前后的数据分布对比和增强样本数量统计
+    - _需求: 7.5_
+  - [x] 11.6 创建数据增强CLI脚本
+    - 创建 `scripts/run_augmentation.py` CLI 入口，支持指定增强类型、目标场景和输出目录
+    - _需求: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6_
+
+- [x] 12. Post_Processor 后处理模块
+  - [x] 12.1 实现热词纠正和正则替换
+    - 创建 `scripts/post_processor.py`，实现 `PostProcessor` 类
+    - 实现 `load_hotwords()` 方法：从热词表文件加载热词条目
+    - 实现 `apply_hotword_correction()` 方法：将识别文本中的错误词替换为热词表中的正确词汇
+    - 实现 `apply_regex_rules()` 方法：应用正则替换规则
+    - _需求: 8.1, 8.2, 8.4_
+  - [ ]* 12.2 编写属性测试：热词替换正确性
+    - **Property 19: 热词替换正确性**
+    - 对任意热词表和包含错误词的文本，验证所有匹配的错误词被替换为正确词汇，不在热词表中的部分不被修改
+    - **验证: 需求 8.1**
+  - [x] 12.3 实现语言模型N-best重排序
+    - 实现 `apply_lm_rerank()` 方法：从 N-best 候选中选择语言模型得分最高的结果
+    - _需求: 8.3_
+  - [ ]* 12.4 编写属性测试：N-best重排序选择最优
+    - **Property 20: N-best重排序选择最优**
+    - 对任意非空 N-best 候选列表，验证返回得分最高的候选文本
+    - **验证: 需求 8.3**
+  - [x] 12.5 实现后处理流水线和效果评估
+    - 实现 `process()` 方法：按照热词纠正→正则替换→语言模型重排序的顺序执行完整后处理流水线
+    - 实现 `evaluate_effect()` 方法：计算后处理前后的 CER/WER 变化
+    - _需求: 8.5, 8.6_
+  - [ ]* 12.6 编写属性测试：后处理流水线执行顺序
+    - **Property 21: 后处理流水线执行顺序**
+    - 对任意启用多个后处理步骤的 PostProcessConfig，验证 applied_rules 中热词纠正在正则替换之前，正则替换在语言模型重排序之前
+    - **验证: 需求 8.5**
+  - [ ]* 12.7 编写属性测试：后处理CER/WER变化量化
+    - **Property 22: 后处理CER/WER变化量化**
+    - 对任意参考文本、原始识别文本和后处理文本，验证 CER 变化值等于后处理后 CER 减去后处理前 CER
+    - **验证: 需求 8.6**
+  - [x] 12.8 创建后处理CLI脚本
+    - 创建 `scripts/apply_postprocess.py` CLI 入口，支持加载热词表、应用后处理规则和评估效果
+    - _需求: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6_
+
+- [x] 13. 检查点 - 确保所有测试通过
+  - 确保所有测试通过，如有问题请询问用户。
+
+- [x] 14. Optimizer_System 优化闭环协调器
+  - [x] 14.1 实现迭代生命周期管理
+    - 创建 `scripts/optimizer_system.py`，实现 `OptimizerSystem` 类
+    - 实现 `start_iteration()` 方法：创建新的优化迭代记录，返回 iteration_id
+    - 实现 `run_analysis_phase()` 方法：协调 Training_Monitor、Result_Analyzer、Dataset_Analyzer 执行分析
+    - 实现 `run_optimization_phase()` 方法：根据 OptimizationPlan 协调执行层模块执行优化
+    - _需求: 9.1_
+  - [x] 14.2 实现迭代对比和回滚功能
+    - 实现 `compare_iterations()` 方法：对比两次迭代的 CER/WER 变化
+    - 实现 `rollback_to_iteration()` 方法：回滚到指定迭代的模型和配置状态
+    - 实现 `get_iteration_history()` 方法：获取迭代历史记录
+    - _需求: 9.2, 9.3, 9.4_
+  - [ ]* 14.3 编写属性测试：迭代回滚状态恢复
+    - **Property 23: 迭代回滚状态恢复**
+    - 对任意迭代历史中的迭代 ID，验证 rollback 后系统配置与该迭代记录中保存的配置完全一致
+    - **验证: 需求 9.4**
+  - [x] 14.4 实现优化停滞检测
+    - 实现 `check_optimization_plateau()` 方法：检测连续 3 次迭代无 CER 改善
+    - _需求: 9.5_
+  - [ ]* 14.5 编写属性测试：优化停滞检测
+    - **Property 24: 优化停滞检测**
+    - 对任意迭代历史序列，验证当且仅当最近 3 次迭代 CER 均未改善时返回 True
+    - **验证: 需求 9.5**
+  - [x] 14.6 创建迭代管理CLI脚本
+    - 创建 `scripts/manage_iterations.py` CLI 入口，支持启动迭代、查看历史、对比迭代和回滚操作
+    - _需求: 9.1, 9.2, 9.3, 9.4, 9.5_
+
+- [x] 15. Skill_Evolution_Engine Skill自我进化引擎
+  - [x] 15.1 实现效果反馈记录和标记
+    - 创建 `scripts/skill_evolution.py`，实现 `SkillEvolutionEngine` 类
+    - 实现 `record_feedback()` 方法：记录优化效果反馈的完整上下文
+    - 实现 `label_feedback()` 方法：根据 CER 变化标记反馈为正面或负面
+    - _需求: 10.1, 10.2_
+  - [ ]* 15.2 编写属性测试：效果反馈正负标记正确性
+    - **Property 25: 效果反馈正负标记正确性**
+    - 对任意 CER before 和 CER after 值对，验证 cer_after < cer_before 时标记为正面，否则标记为负面
+    - **验证: 需求 10.2**
+  - [x] 15.3 实现模式分析和策略权重更新
+    - 实现 `analyze_patterns()` 方法：分析历史反馈模式，提取高/低成功率策略
+    - 实现 `update_strategy_weights()` 方法：更新策略推荐权重
+    - _需求: 10.3, 10.4_
+  - [ ]* 15.4 编写属性测试：反馈驱动的策略权重调整
+    - **Property 26: 反馈驱动的策略权重调整**
+    - 对任意包含足够数量 EffectFeedback 的知识库，验证成功率高于平均水平的策略获得不低于低成功率策略的推荐权重
+    - **验证: 需求 10.3, 10.4**
+  - [x] 15.5 实现Skill文件更新和版本管理
+    - 实现 `update_skill_files()` 方法：根据策略权重更新 `.kiro/skills/` 下的 Skill 文件内容
+    - 实现 `create_version_snapshot()` 方法：创建 Skill 版本快照（包含策略规则、知识库状态和 Skill 文件副本）
+    - 实现 `compare_versions()` 方法：对比不同 Skill 版本的建议质量指标
+    - _需求: 10.7, 10.8_
+  - [ ]* 15.6 编写属性测试：Skill版本快照完整性
+    - **Property 27: Skill版本快照完整性**
+    - 对任意策略变更操作，验证 create_version_snapshot 创建的 SkillVersion 包含完整策略规则和知识库状态
+    - **验证: 需求 10.7**
+  - [x] 15.7 实现Skill版本自动回滚和手动学习触发
+    - 实现 `rollback_version()` 方法：回滚到指定版本的 Skill 文件内容
+    - 实现自动回滚逻辑：新版本正面反馈率连续低于上一版本时自动回滚
+    - 实现 `trigger_learning()` 方法：基于指定时间范围内的反馈重新优化策略
+    - _需求: 10.9, 10.10_
+  - [ ]* 15.8 编写属性测试：Skill版本自动回滚
+    - **Property 28: Skill版本自动回滚**
+    - 对任意连续 Skill 版本序列，验证新版本正面反馈率连续低于上一版本时系统自动回滚
+    - **验证: 需求 10.9**
+
+- [x] 16. Skill_Knowledge_Base 知识库模块
+  - [x] 16.1 实现知识库管理功能
+    - 创建 `scripts/skill_knowledge_base.py`，实现 `SkillKnowledgeBase` 类
+    - 实现 `add_knowledge()` 方法：添加知识条目（场景-问题-解决方案映射、参数调整与效果规律、数据特征与增强策略对应关系）
+    - 实现 `query_knowledge()` 方法：按类型和过滤条件查询知识条目
+    - 实现 `get_structured_view()` 方法：以结构化形式展示知识条目
+    - 实现 `update_confidence()` 方法：更新知识条目置信度
+    - _需求: 10.5, 10.6_
+  - [x] 16.2 创建反馈记录和知识库管理CLI脚本
+    - 创建 `scripts/record_feedback.py` CLI 入口，支持记录效果反馈
+    - 创建 `scripts/manage_knowledge.py` CLI 入口，支持查询知识库、添加知识条目和触发学习
+    - _需求: 10.1, 10.5, 10.6, 10.10_
+
+- [x] 17. 检查点 - 确保所有测试通过
+  - 确保所有测试通过，如有问题请询问用户。
+
+- [-] 18. 错误处理和集成测试
+  - [x] 18.1 实现全局错误处理器
+    - 创建 `scripts/error_handlers.py`，实现 `TrainingErrorHandler`、`ConfigErrorHandler`、`SkillOutputHandler` 三个错误处理器类
+    - `TrainingErrorHandler`：处理 NaN/Inf 异常和梯度爆炸
+    - `ConfigErrorHandler`：处理无效配置和模型初始化失败
+    - `SkillOutputHandler`：处理 Kiro Skill 输出解析异常和 Skill 文件验证
+    - _需求: 1.5, 5.4, 5.5, 6.5_
+  - [ ]* 18.2 编写集成测试：端到端优化闭环
+    - 测试从分析到建议到执行的完整流程（使用 mock 替代 FunASR 模型推理和 Kiro Skill 输出）
+    - 验证模块间数据传递的格式兼容性
+    - _需求: 9.1, 9.2_
+  - [ ]* 18.3 编写集成测试：回滚机制
+    - 测试模型配置回滚、训练参数回滚、迭代回滚和 Skill 版本回滚的正确性
+    - _需求: 5.5, 6.5, 9.4, 10.9_
+  - [ ]* 18.4 编写集成测试：Skill进化流程
+    - 测试反馈记录→模式分析→Skill文件更新→版本管理的完整链路
+    - _需求: 10.1, 10.2, 10.3, 10.4, 10.7_
+  - [ ]* 18.5 编写集成测试：CLI工具链
+    - 测试各 Python 脚本的输入输出格式正确性
+    - 验证 CLI 脚本的参数解析和错误处理
+    - _需求: 全部需求模块_
+
+- [x] 19. 最终检查点 - 确保所有测试通过
+  - 确保所有测试通过，如有问题请询问用户。
+
+- [x] 20. Skill内容自动进化升级
+  - [x] 20.1 数据库schema升级 — knowledge_entries表增加生命周期字段
+    - 在 `scripts/database.py` 的建表逻辑中增加 `state`（TEXT, DEFAULT 'active'）、`verified_count`（INTEGER, DEFAULT 0）、`last_verified_at`（TEXT）、`auto_confidence`（REAL）字段
+    - 在 `scripts/models.py` 的 `KnowledgeEntry` 数据类中增加对应字段
+    - _需求: 11.9, 11.10_
+  - [x] 20.2 实现知识条目置信度自动计算
+    - 在 `scripts/skill_knowledge_base.py` 中新增 `compute_confidence()` 方法：基于 effect_feedbacks 表中相关反馈的成功率和时间衰减因子自动计算置信度
+    - 实现公式：confidence = (success_count / total_count) * 0.95^(days_since_last_verification / 30)
+    - _需求: 11.10_
+  - [x] 20.3 实现知识条目生命周期状态转换
+    - 在 `scripts/skill_knowledge_base.py` 中新增 `apply_lifecycle_transitions()` 方法：遍历所有 active 状态的知识条目，根据 last_verified_at 和 auto_confidence 自动转换状态
+    - active → stale（超过60天未验证）、stale → archived（超过120天或 confidence < 0.3）、stale → active（重新验证成功）
+    - _需求: 11.9_
+  - [x] 20.4 实现知识写入行动验证门槛
+    - 在 `scripts/skill_knowledge_base.py` 中修改 `add_knowledge()` 方法：增加写入前校验逻辑
+    - 校验条件：必须来源于完整迭代闭环（iteration_id 非空）、关联的 effect_feedback 中 is_positive=True、同类知识在至少2次不同迭代中验证过
+    - 新增 `add_knowledge_verified()` 方法用于严格模式写入，保留原 `add_knowledge()` 用于手动写入
+    - _需求: 11.11_
+  - [x] 20.5 实现Skill文件速查表自动生成
+    - 在 `scripts/skill_evolution.py` 中新增 `generate_skill_summary_table()` 方法：从 strategy_weights 和 knowledge_entries 表中提取高置信度策略，生成 markdown 表格
+    - 新增 `update_skill_quick_reference()` 方法：将速查表写入对应 Skill 文件顶部（在"能力描述"之前插入"经验速查"区块）
+    - _需求: 11.6_
+  - [x] 20.6 实现Skill文件规则参数自动更新
+    - 在 `scripts/skill_evolution.py` 中新增 `update_skill_rules_from_patterns()` 方法：基于 pattern 分析结果，用 file_patch 方式更新 Skill 文件中的具体阈值和置信度数值
+    - 实现规则淘汰标记：对连续3次验证失败的规则，在 Skill 文件中添加 deprecated 标记
+    - 实现新规则追加：对高置信度新模式，追加到 Skill 文件的"自动发现的规则"区块
+    - _需求: 11.1, 11.2, 11.3, 11.4_
+  - [x] 20.7 实现迭代完成时自动触发Skill审查
+    - 在 `scripts/optimizer_system.py` 的 `complete_iteration()` 方法末尾增加 `_auto_review_skills()` 调用
+    - 轻量审查内容：更新本次建议的反馈标记、检查是否有规则需要更新阈值/置信度、执行知识条目生命周期转换
+    - _需求: 11.7_
+  - [x] 20.8 实现深度Skill审查（每5次迭代）
+    - 在 `scripts/optimizer_system.py` 中新增 `_deep_review_skills()` 方法
+    - 深度审查内容：合并相似知识条目、淘汰长期无效规则、重新计算所有策略权重、更新所有 Skill 文件的速查表
+    - 在 `_auto_review_skills()` 中检查迭代计数，每5次触发深度审查
+    - _需求: 11.8_
+  - [x] 20.9 更新 manage_knowledge.py CLI 支持生命周期操作
+    - 增加 `lifecycle` 子命令：手动触发状态转换、查看各状态条目数量
+    - 修改 `query` 子命令：默认只返回 active 状态条目，增加 `--include-stale` 和 `--include-archived` 参数
+    - _需求: 11.9, 11.12_
+
+- [x] 21. 检查点 - Skill进化升级验证
+  - 确保所有新功能测试通过，验证 Skill 文件自动更新、知识库生命周期转换、自动触发审查等功能正常工作。如有问题请询问用户。
+
+- [x] 22. FunASR 实际训练/推理/增强集成（与设计文档 §7/§11/§12 对应）
+  - [x] 22.1 Trainer：FunASR 训练包装
+    - 创建 `scripts/funasr_trainer.py`（类 `Trainer`）和 `scripts/run_training.py`（CLI）
+    - 通过 `subprocess.Popen` 启动 `funasr.bin.train_ds`，逐行读取 stdout 并经 `FunASRLogParser.parse_line()` 实时解析为 `TrainingMetrics`，追加到 `logs/training/training_metrics.jsonl`；同时保留 FunASR 原始 `log.txt`
+    - CLI 强制校验 `train_jsonl` / `val_jsonl` 位于 `data.augmented_dir` 下且带 `_aug` 后缀（业务规则 `augmentation.require_augmentation: true`）
+    - _需求: 6.1, 6.2, 6.3, 7.7, 7.8, 7.9_
+  - [x] 22.2 Evaluator：FunASR 推理 + 后处理集成
+    - 创建 `scripts/funasr_evaluator.py`（类 `Evaluator`）和 `scripts/run_inference.py`（CLI）
+    - 构造器通过 `_build_post_processor(config)` 从 `config['post_process']` 构造 `PostProcessor`；`_run_inference()` 对每条样本保留 `hypothesis_raw` 并经后处理后写入 `hypothesis`
+    - CER/WER/场景指标全部委托 `ResultAnalyzer`，避免重复实现
+    - _需求: 2.1, 2.2, 8.1, 8.5, 8.6_
+  - [x] 22.3 NoiseAugmentor：真实音频增强（MUSAN）
+    - 创建 `scripts/funasr_noise_augment.py`（类 `NoiseAugmentor`），将 `scripts/run_augmentation.py` 重写为仅 real-audio 模式
+    - 支持 babble / music / noise / reverb / speed / volume 六种策略，`_mix_at_snr` 统一做信噪比混合；原始数据不被修改，产物输出到 `data/augmented/{split}_aug.jsonl` 和 `<utt_id>_aug_<type>.wav`
+    - _需求: 7.1, 7.3, 7.6_
+  - [x] 22.4 统一训练日志解析
+    - 创建 `scripts/funasr_log_analyzer.py`（类 `FunASRLogParser`）：按正则解析 FunASR 每行 stdout 为 `TrainingMetrics`；被 `Trainer` 实时调用
+    - _需求: 1.1, 1.2_
+
+- [x] 23. 用户扩展：数据预处理与策略映射
+  - [x] 23.1 数据预处理（duration/snr/energy/zcr）
+    - 创建 `scripts/preprocess_metadata.py`：为增强后 jsonl 中每条样本追加 duration、VAD-based SNR、能量、过零率等元数据；`--all` 默认读取增强后数据路径
+    - _需求: 3.1, 3.2, 3.5_
+  - [x] ~~23.2 场景分类~~ — 已移除，scene_type 在增强时由 NoiseAugmentor 自动标注
+  - [x] 23.3 Badcase 热词挖掘
+    - 创建 `scripts/extract_hotwords.py`：从评估报告 badcase 中挖掘高频替换对作为热词候选；支持 `--merge` 合并到主配置 `configs/post_process/hotwords.txt`
+    - _需求: 2.5, 8.1_
+  - [x] 23.4 Badcase → 数据手段映射
+    - 创建 `scripts/badcase_strategy_map.py`：定义 `DATA_STRATEGIES` 列表（babble_augment_for_insertion、hotwords_from_substitution、specaug_for_substitution、reverb_speed_for_deletion、full_augment_for_high_cer、balance_scene_augment、volume_augment_for_sensitivity 等策略）
+    - 实现 `match_strategies(evaluation_report)` 根据 trigger 表达式返回触发的策略列表；实现 `seed_knowledge_base(kb)` 将策略注入知识库作为 seed
+    - _需求: 4.4, 7.1, 7.4, 10.5_
+  - [x] 23.5 策略 seed CLI
+    - 创建 `scripts/seed_strategies.py`：CLI 入口将 `DATA_STRATEGIES` 批量写入知识库
+    - _需求: 10.5_
+  - [x] 23.6 SpecAugment 配置支持
+    - 在 `configs/funasr_config.yaml` 的 `training` 段增加 `spec_aug` 嵌套字段（`enabled` / `num_t_mask` / `num_f_mask` / `max_t` / `max_f` / `max_w`），对应 `DATA_STRATEGIES` 中的 specaug_for_substitution 策略
+    - _需求: 6.1, 6.2_
+
+- [x] 24. 统一主配置与版本快照
+  - [x] 24.1 `configs/funasr_config.yaml` 作为唯一主配置源
+    - 6 个顶级段落：model / data / augmentation / training / evaluation / post_process；所有 CLI 脚本从这一份文件读取
+    - _需求: 5.1, 5.2, 6.1, 7.1, 8.1_
+  - [x] 24.2 apply_* 脚本三重一致性
+    - `apply_model_config.py` / `apply_training_config.py` / `apply_postprocess.py` 每次变更：(1) 更新主配置；(2) 保存带版号的 yaml 到 `configs/{model|training|augmentation|post_process}/`；(3) 记录变更到 SQLite
+    - `apply_postprocess.py` 增加 `update-config` 子命令，支持热词表批量合并
+    - _需求: 5.3, 6.3, 8.2, 9.4_
+  - [x] 24.3 数据增强与后处理配置快照
+    - 配置变更时 `save_config()` 覆盖全部 4 个维度（model / training / augmentation / post_process），不再限于 model + training
+    - _需求: 9.3, 9.4_
+
+## 说明
+
+- 标记 `*` 的任务为可选任务，可跳过以加速 MVP 开发
+- 每个任务引用了具体的需求编号，确保需求可追溯
+- 检查点任务确保增量验证，及时发现问题
+- 属性测试验证 28 个正确性属性的通用正确性保证
+- 单元测试验证具体示例和边界条件
+- 所有 Python 脚本输出结构化 JSON 数据，供 Kiro Skill 文件读取和推理

@@ -1,0 +1,118 @@
+# ================================================================== #
+# 智能音箱单说话人场景 - 数据增强配置
+# ================================================================== #
+# 目标：将干净近场录音增强为模拟智能音箱在家庭环境中收到的声音
+#
+# 声学建模思路：
+#   说话人（1-5米）→ 房间混响 → 音箱麦克风频响 → 环境底噪 → 音箱 ADC
+#
+# 增强链顺序遵循真实信号传播路径：
+#   1. speed_perturb    — 语速多样性（说话人层面）
+#   2. pitch_shift      — 音色多样性（说话人层面）
+#   3. reverb           — 房间声学（传播路径）
+#   4. eq_random        — 音箱麦克风频响（设备层面）
+#   5. volume_perturb   — 距离/音量变化（传播路径）
+#   6. gaussian_noise   — 家庭环境底噪（环境层面）
+#   7. clipping         — 近场大声说话时的麦克风过载（设备层面）
+# ================================================================== #
+
+seed: 42
+num_workers: 4
+augment_factor: 3  # 每条原始音频生成 3 个增强样本，覆盖更多声学条件组合
+
+strategies:
+  # ---------- 说话人多样性 ----------
+  speed_perturb:
+    enabled: true
+    factor_range: [0.9, 1.1]     # 轻微语速变化，保持自然
+
+  pitch_shift:
+    enabled: true
+    semitone_range: [-1.5, 1.5]  # 轻微音调变化，模拟不同说话人音色
+
+  # ---------- 房间声学 ----------
+  reverb:
+    enabled: true
+    rt60_range: [0.2, 0.7]      # 家庭房间典型 RT60：客厅 0.4-0.7s，卧室 0.2-0.4s
+
+  # ---------- 设备频响 ----------
+  eq_random:
+    enabled: true
+    num_bands: 6                 # 6 频段更精细模拟音箱麦克风频响
+    gain_range: [-4, 4]          # 适度范围，音箱麦克风频响偏差不会太极端
+
+  # ---------- 距离/音量 ----------
+  volume_perturb:
+    enabled: true
+    gain_range: [-10, 3]         # 偏向衰减：远距离说话更常见，近距离偶尔偏大
+
+  # ---------- 环境底噪 ----------
+  gaussian_noise:
+    enabled: true
+    snr_range: [15, 35]          # 家庭环境：安静卧室 ~35dB，开空调客厅 ~15dB
+
+  # ---------- 麦克风过载 ----------
+  clipping:
+    enabled: true
+    threshold_range: [0.6, 0.95] # 轻微削波，模拟近场大声说话偶发过载
+
+  # ---------- 以下策略在此场景关闭 ----------
+  speaker_mix:
+    enabled: false               # 单说话人场景，不需要背景人声
+    snr_range: [10, 25]
+    max_speakers: 1
+    random_insert: true
+    bg_reverb: true
+    bg_rt60_range: [0.4, 1.2]
+    bg_lowpass_freq: 3000
+
+  noise_from_file:
+    enabled: false               # 如有真实家庭噪声录音可启用
+    noise_dir: ""
+    snr_range: [15, 30]
+
+  real_rir:
+    enabled: false               # 如有真实 RIR（OpenSLR-26/28）可替代合成 reverb
+    rir_dir: ""
+
+  random_crop_pad:
+    enabled: false
+    target_sec: null
+    pad_mode: "zero"
+
+  time_stretch:
+    enabled: false               # 已有 speed_perturb，不重复
+    rate_range: [0.9, 1.1]
+
+  random_silence:
+    enabled: false               # 单说话人指令场景，不需要插入停顿
+    max_inserts: 3
+    duration_range: [0.05, 0.3]
+
+  codec_simulate:
+    enabled: false               # 非电话场景
+    codecs: ["ulaw", "alaw"]
+
+  bandpass_filter:
+    enabled: false               # 非电话场景
+    low_freq: 300
+    high_freq: 3400
+    order: 5
+
+  concatenate:
+    enabled: false
+    max_concat: 3
+    gap_range: [0.1, 0.5]
+
+# 增强链：按真实信号传播路径排列
+chain:
+  - speed_perturb        # 1. 语速多样性
+  - pitch_shift          # 2. 音色多样性
+  - reverb               # 3. 房间混响（说话人声音经房间传播到音箱）
+  - eq_random            # 4. 音箱麦克风频响特性
+  - volume_perturb       # 5. 距离导致的音量变化
+  - gaussian_noise       # 6. 家庭环境底噪
+  - clipping             # 7. 偶发麦克风过载
+
+# 路径匹配规则
+folder_chains: {}

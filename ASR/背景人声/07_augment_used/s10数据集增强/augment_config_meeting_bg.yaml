@@ -1,0 +1,72 @@
+# ================================================================== #
+# 短音频嵌入会议背景 - 数据增强配置
+# ================================================================== #
+# 场景：主说话人短音频（≤2秒）嵌入 AliMeeting 远场会议背景中
+#
+# 用法：
+#   python augment_short_in_meeting.py --config augment_config_meeting_bg.yaml
+# ================================================================== #
+
+seed: 42
+
+# ──────────────── 输入输出 ────────────────
+# 主说话人目录（短音频）
+main_dir: "E:/8.音频/03 s10/s10_data_reflow/labeled copy/wav"
+
+# 背景说话人目录（AliMeeting 远场录音）
+bg_dir: "F:/asr_datasets/alimeeting/Train_Ali_far/audio_dir"
+
+# 输出目录（wav/ 子目录存音频，根目录存 text 和 wav.scp）
+output_dir: "E:/8.音频/03 s10/s10_data_reflow/augment_output"
+
+# 增强倍数：每条主音频生成几条增强样本
+augment_factor: 1
+
+# 断点续跑：true 跳过已存在的输出文件，false 全部重新生成
+resume: false
+
+# ──────────────── 标签文件（可选） ────────────────
+# 提供后会生成增强音频对应的 text 和 wav.scp
+# 格式：text_file 每行 "key 文本"，scp_file 每行 "key /path/to/wav"
+text_file: "E:/8.音频/03 s10/s10_data_reflow/labeled copy/text.txt"    # 例如 "E:/path/to/text"
+scp_file: "E:/8.音频/03 s10/s10_data_reflow/labeled copy/wav.scp"     # 例如 "E:/path/to/wav.scp"，不提供则用文件名 stem 作为 key
+
+# ──────────────── 主说话人过滤 ────────────────
+main_speaker:
+  max_duration: 2.0       # 最大时长（秒），超过则不参与增强
+  min_rms: 0.02           # 最小 RMS，低于此值视为静音，跳过
+  max_clip_ratio: 0.05    # 最大削波比例（peak≥0.99 的采样点占比），超过则跳过
+
+# ──────────────── 背景音频截取 ────────────────
+background:
+  crop_min: 5.0           # 截取最短秒数
+  crop_max: 7.0           # 截取最长秒数（均匀分布）
+  prefer_active: true     # 优先选取含活跃语音的片段（能量更高的候选）
+  n_candidates: 5         # 活跃段选择时的候选数量
+
+# ──────────────── 混合参数 ────────────────
+mix:
+  snr_min: 5.0            # 主说话人 SNR 下限 dB（>0 保证主说话人比背景响）
+  snr_max: 20.0           # 主说话人 SNR 上限 dB
+  main_gain_db: -6.0       # 主说话人额外增益 dB（0=不变，-6=减半，+6=加倍）
+  bg_gain_db: -20.0         # 背景声额外增益 dB（0=不变，-6=减半，-12=很安静）
+
+# ──────────────── 归一化 ────────────────
+normalize:
+  enabled: false
+  mode: "main_region"     # "main_region"=以主说话人区域峰值为参考, "global"=全局峰值
+  target_peak: 0.05        # 归一化目标峰值（0.6 ≈ -4.4dBFS，较安静）
+
+# ──────────────── 可选后处理 ────────────────
+post_processing:
+  # 混响
+  reverb:
+    enabled: false
+    rt60_min: 0.1
+    rt60_max: 0.4
+
+  # 高斯底噪
+  gaussian_noise:
+    enabled: false
+    snr_min: 30.0
+    snr_max: 45.0

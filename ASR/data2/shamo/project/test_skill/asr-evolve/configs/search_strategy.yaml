@@ -1,0 +1,57 @@
+current_phase: coarse
+phase_transitions:
+  coarse_to_fine:
+    trigger_cer: 0.1
+    announce: true
+  fine_to_exploit:
+    trigger_cer: 0.05
+    announce: true
+phases:
+  coarse:
+    description: 粗搜索 — 大步快试，快速降低 CER
+    ucb1_C: 2.0
+    max_params_per_trial: 3
+    probe_required: false
+    probe_pass_threshold: loss_decreasing
+    dead_end_patience: 3
+    param_ranges:
+      lr_multiplier:
+      - 0.2
+      - 5.0
+      epoch_multiplier:
+      - 0.5
+      - 4.0
+      augment_prob_step: 0.2
+    explore_ratio: 0.7
+  fine:
+    description: 精搜索 — 控制变量，精细调参
+    ucb1_C: 1.4
+    max_params_per_trial: 1
+    probe_required: true
+    probe_pass_threshold: loss_decrease_gt_0.01
+    dead_end_patience: 2
+    param_ranges:
+      lr_multiplier:
+      - 0.7
+      - 1.5
+      epoch_delta:
+      - -3
+      - 5
+      augment_prob_step: 0.05
+    explore_ratio: 0.4
+  exploit:
+    description: 利用阶段 — 微调最优区域
+    ucb1_C: 0.5
+    max_params_per_trial: 1
+    probe_required: true
+    probe_pass_threshold: statistical_significance
+    dead_end_patience: 1
+    param_ranges:
+      lr_multiplier:
+      - 0.9
+      - 1.1
+      epoch_delta:
+      - -1
+      - 2
+      augment_prob_step: 0.02
+    explore_ratio: 0.1

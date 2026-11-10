@@ -1,0 +1,21 @@
+@startuml
+skinparam defaultFontName "Microsoft YaHei"
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+
+actor "平台管理员" as Admin
+
+rectangle "系统" {
+  usecase "用户注册与管理" as UC1
+  usecase "创建项目" as UC2
+  usecase "删除项目" as UC3
+  usecase "分配项目成员与角色" as UC4
+}
+
+Admin --> UC1
+Admin --> UC2
+Admin --> UC3
+Admin --> UC4
+@enduml

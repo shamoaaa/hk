@@ -1,0 +1,145 @@
+# ================================================================== #
+# 智能音箱多说话人场景 - 数据增强配置
+# ================================================================== #
+# 目标：将干净近场录音增强为模拟智能音箱在多人家庭环境中收到的声音
+#
+# 场景建模：
+#   主说话人（0.5-3米）对音箱说话，周围有 1-3 个背景说话人在不同距离交谈。
+#   每个背景人有独立的距离（混响强度）、音色（pitch）、音量（SNR）。
+#
+#   真实信号传播路径：
+#     背景人声 → 独立 pitch/reverb/lowpass → 混入
+#     主说话人 → 房间混响 → 音箱麦克风频响 → 环境底噪 → ADC
+#
+# 增强链顺序：
+#   1. speaker_mix     — 混入多个背景说话人（每人独立距离/音色/音量）
+#   2. speed_perturb   — 主说话人语速多样性
+#   3. reverb          — 主说话人的房间混响
+#   4. eq_random       — 音箱麦克风频响染色
+#   5. volume_perturb  — 主说话人距离/音量变化
+#   6. gaussian_noise  — 家庭环境底噪
+#   7. clipping        — 偶发麦克风过载
+# ================================================================== #
+
+seed: 42
+num_workers: 8
+augment_factor: 1  # 多说话人组合空间大，4 倍增强覆盖更多场景
+resume: false       # 断点续跑：true 跳过已存在的输出文件，false 全部重新生成
+
+strategies:
+  # ========== 核心：多说话人混合 ========== #
+  speaker_mix:
+    enabled: true
+    max_speakers: 1              # 最多 1 个背景说话人
+    random_insert: true          # 背景人声在随机时刻出现（非全程覆盖）
+    overlap_mode: "auto"         # 时间对齐模式：auto 随机选择以下模式之一
+    # 可选模式：
+    #   full       — 背景声全程覆盖
+    #   random     — 随机位置插入，保证 min_overlap 重叠
+    #   mid_insert — 主说话人说到一半插入背景声
+    #   bg_first   — 先出现背景声，再是主说话人
+    #   bg_tail    — 主说话人说完后出现背景声
+    #   bg_longer  — 背景声比主音频长，主音频结束后背景声还在
+    #   auto       — 每次随机选一种（推荐，最大多样性）
+    min_overlap: 0.8             # 背景声与主音频最小重叠比例（80%）
+    snr_range: [5, 15]            # 背景人 1-4米：1米近处交谈(0dB) ~ 4米远处(10dB)
+    bg_snr_per_speaker: true     # 每个背景人独立 SNR，模拟不同距离的音量差异
+    bg_distance_correlated: true # 距离因子关联：SNR/RT60/lowpass 由同一个距离因子 t 驱动
+    #                            # t=0(近) → SNR低+RT60小+lowpass高; t=1(远) → SNR高+RT60大+lowpass低
+    #
+    # --- 背景人声独立混响（模拟不同距离） ---
+    bg_reverb: true
+    bg_rt60_range: [0.1, 0.15]   # 1米(0.15s) ~ 4米(0.6s)
+    #
+    # --- 背景人声独立低通（模拟远距离高频衰减） ---
+    bg_lowpass_range: [6500, 7800]  # 4米(5.5kHz) ~ 1米(7.8kHz近乎无衰减)
+    #
+    # --- 背景人声独立音调偏移（模拟不同音色） ---
+    bg_pitch_shift: true
+    bg_semitone_range: [-2, 2]   # ±2 半音，覆盖男女老幼音色差异
+
+  # ========== 主说话人多样性 ========== #
+  speed_perturb:
+    enabled: true
+    factor_range: [0.9, 1.1]
+
+  pitch_shift:
+    enabled: true               # 主说话人音调不变（由 speaker_mix 的 bg_pitch_shift 处理背景人）
+    semitone_range: [-1.5, 1.5]
+
+  # ========== 房间声学（主说话人） ========== #
+  reverb:
+    enabled: true
+    rt60_range: [0.08, 0.1]      # 主说话人 0.5-2.5 米
+
+  # ========== 设备频响 ========== #
+  eq_random:
+    enabled: true
+    num_bands: 6
+    gain_range: [-4, 4]
+
+  # ========== 距离/音量 ========== #
+  volume_perturb:
+    enabled: true
+    gain_range: [-14, 0]          # 主说话人 0.5-2.5 米：0.5米≈0dB, 2.5米≈-14dB (20*log10(2.5/0.5))
+
+  # ========== 环境底噪 ========== #
+  gaussian_noise:
+    enabled: true
+    snr_range: [35, 40]          # 家庭环境底噪应该很轻微，SNR 提高
+
+  # ========== 麦克风过载 ========== #
+  clipping:
+    enabled: true
+    threshold_range: [0.6, 0.95]
+
+  # ========== 以下策略关闭 ========== #
+  noise_from_file:
+    enabled: false               # 如有 MUSAN/DEMAND 等真实噪声可启用
+    noise_dir: ""
+    snr_range: [10, 25]
+
+  real_rir:
+    enabled: false               # 如有 OpenSLR-26/28 真实 RIR 可替代合成 reverb
+    rir_dir: ""
+
+  random_crop_pad:
+    enabled: false
+    target_sec: null
+    pad_mode: "zero"
+
+  time_stretch:
+    enabled: false
+    rate_range: [0.9, 1.1]
+
+  random_silence:
+    enabled: false
+    max_inserts: 3
+    duration_range: [0.05, 0.3]
+
+  codec_simulate:
+    enabled: false
+    codecs: ["ulaw", "alaw"]
+
+  bandpass_filter:
+    enabled: false
+    low_freq: 300
+    high_freq: 3400
+    order: 5
+
+  concatenate:
+    enabled: false
+    max_concat: 3
+    gap_range: [0.1, 0.5]
+
+# 增强链
+chain:
+  - reverb               # 1. 主说话人房间混响（在混入背景声之前，避免双重混响）
+  - speaker_mix          # 2. 混入背景说话人（每人独立距离/音色/音量，含独立 bg_reverb）
+  - speed_perturb        # 3. 主说话人语速多样性
+  - eq_random            # 4. 音箱麦克风频响
+  - volume_perturb       # 5. 主说话人距离/音量
+  - gaussian_noise       # 6. 家庭环境底噪
+  - clipping             # 7. 偶发麦克风过载
+
+folder_chains: {}

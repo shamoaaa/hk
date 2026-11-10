@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EzvizModelBackend.stream_forward() 流式推理流程</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, "Microsoft YaHei", sans-serif; background: #0f172a; color: #e2e8f0; padding: 40px 20px; }
+  h1 { text-align: center; font-size: 24px; color: #38bdf8; margin-bottom: 8px; }
+  .subtitle { text-align: center; font-size: 13px; color: #64748b; margin-bottom: 40px; }
+  .flow { display: flex; flex-direction: column; align-items: center; gap: 0; max-width: 920px; margin: 0 auto; }
+  .arrow { width: 2px; height: 24px; background: #475569; position: relative; }
+  .arrow::after { content: ''; position: absolute; bottom: -5px; left: -4px; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid #475569; }
+  .arrow-label { font-size: 11px; color: #94a3b8; position: absolute; left: 14px; top: 2px; white-space: nowrap; }
+  .node { border-radius: 10px; padding: 14px 20px; width: 100%; max-width: 860px; position: relative; }
+  .node-title { font-weight: 700; font-size: 13.5px; margin-bottom: 5px; display: flex; align-items: center; gap: 8px; }
+  .node-title .tag { font-size: 10px; padding: 2px 7px; border-radius: 4px; font-weight: 600; }
+  .node-body { font-size: 12px; line-height: 1.7; color: #cbd5e1; }
+  .node-body code { background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 3px; font-size: 11px; color: #7dd3fc; font-family: "Cascadia Code", "Fira Code", monospace; }
+  .node-body .dim { color: #64748b; }
+  .node-body .hl { color: #fbbf24; font-weight: 600; }
+  .node-body ul { margin: 4px 0 0 18px; }
+  .node-body li { margin-bottom: 2px; }
+  .node-body ol { margin: 4px 0 0 18px; }
+  .node-body ol li { margin-bottom: 4px; }
+  .fr { font-size: 10.5px; color: #475569; margin-top: 4px; }
+
+  .pe { background: linear-gradient(135deg, #1e3a5f, #1e293b); border: 1px solid #2563eb; }
+  .pe .node-title { color: #60a5fa; } .pe .tag { background: #1d4ed8; color: #bfdbfe; }
+  .pd { background: linear-gradient(135deg, #1a2e1a, #1e293b); border: 1px solid #22c55e; }
+  .pd .node-title { color: #4ade80; } .pd .tag { background: #166534; color: #bbf7d0; }
+  .pm { background: linear-gradient(135deg, #2d1f3d, #1e293b); border: 1px solid #a855f7; }
+  .pm .node-title { color: #c084fc; } .pm .tag { background: #6b21a8; color: #e9d5ff; }
+  .ph { background: linear-gradient(135deg, #3b2314, #1e293b); border: 1px solid #f97316; }
+  .ph .node-title { color: #fb923c; } .ph .tag { background: #9a3412; color: #fed7aa; }
+  .pp { background: linear-gradient(135deg, #1e293b, #1e293b); border: 1px solid #64748b; }
+  .pp .node-title { color: #94a3b8; } .pp .tag { background: #475569; color: #e2e8f0; }
+  .po { background: linear-gradient(135deg, #1e3a5f, #1e293b); border: 1px solid #06b6d4; }
+  .po .node-title { color: #22d3ee; } .po .tag { background: #0e7490; color: #cffafe; }
+  .pr { background: linear-gradient(135deg, #3b1414, #1e293b); border: 1px solid #ef4444; }
+  .pr .node-title { color: #f87171; } .pr .tag { background: #991b1b; color: #fecaca; }
+  .py { background: linear-gradient(135deg, #3b3514, #1e293b); border: 1px solid #eab308; }
+  .py .node-title { color: #facc15; } .py .tag { background: #854d0e; color: #fef08a; }
+
+  .branch { display: flex; gap: 10px; width: 100%; max-width: 860px; }
+  .branch .node { flex: 1; }
+  .section-label { font-size: 11px; color: #475569; letter-spacing: 2px; text-transform: uppercase; margin: 14px 0 6px; font-weight: 700; }
+  .loop-box { border: 2px dashed #334155; border-radius: 14px; padding: 18px 14px; width: 100%; max-width: 860px; position: relative; }
+  .loop-label { position: absolute; top: -10px; left: 20px; background: #0f172a; padding: 0 8px; font-size: 11px; color: #94a3b8; font-weight: 700; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+<h1>EzvizModelBackend.stream_forward() 流式推理流程</h1>
+<p class="subtitle">2-Pass 策略：流式 ParaformerOnline 实时出结果 → 结束时 SeacoParaformer 离线纠正</p>
+
+<div class="flow">
+
+<!-- ===== 前置: stream_init ===== -->
+<div class="section-label">前置 · stream_init（仅首次调用）</div>
+<div class="node pp">
+  <div class="node-title"><span class="tag">初始化</span> stream_init() → stream_reset()</div>
+  <div class="node-body">
+    客户端调用 <code>/stream_connect</code> 触发。清空所有缓冲区，重置 VAD/ASR 状态：
+    <ul>
+      <li><code>data_online = bytes()</code>，<code>decode_beg = decode_end = 0</code></li>
+      <li>重置流式 ASR cache（<code>inference_online(is_final=True)</code>）</li>
+      <li>重置 VAD cache（<code>vad_online(is_final=True)</code>）</li>
+      <li>解析热词、音频格式（pcm/opus）、唤醒帧长度、唤醒类型</li>
+    </ul>
+    <div class="fr">📄 asr/ezviz_backend.py : 230</div>
+  </div>
+</div>
+
+<div class="arrow"><span class="arrow-label">客户端开始发送音频 chunk → /stream_process</span></div>
+
+<!-- ===== 阶段1: 入口 ===== -->
+<div class="section-label">阶段一 · 请求入口与音频解码</div>
+
+<div class="loop-box">
+<div class="loop-label">🔁 每个 chunk 调用一次 stream_forward（generator 函数，yield 返回）</div>
+
+<div class="flow" style="padding:8px 0;">
+
+<div class="node pe">
+  <div class="node-title"><span class="tag">入口</span> stream_forward(rqs_info, rsp_msg) — 入参校验</div>
+  <div class="node-body">
+    <ul>
+      <li>检查 <code>data_info</code> 长度 = 1，<code>modal = "audio"</code>，<code>type = "base64"</code></li>
+      <li>debug 模式下直接返回固定文本，不做推理</li>
+    </ul>
+  </div>
+</div>
+
+<div class="arrow"></div>
+
+<div class="node pd">
+  <div class="node-title"><span class="tag">解码</span> Base64 解码 + Opus 解码（可选）</div>
+  <div class="node-body">
+    <ol>
+      <li><code>base64_decode()</code> → 二进制数据 <code>b64Decode_Data</code></li>
+      <li>若 <code>rqs_format == 'opus'</code>：每 80 字节一帧 → <code>opus_dec.decode(frame_size=320)</code> → PCM 16kHz 单声道
+        <br><span class="dim">Opus 裸流固定 20ms 帧长，16kHz 采样率 → 每帧 320 samples</span></li>
+      <li>否则直接作为 PCM bytes</li>
+    </ol>
+    输出：<code>binary_Data</code>（PCM int16 bytes）
+  </div>
+</div>
+
+<div class="arrow"></div>
+
+<div class="node ph">
+  <div class="node-title"><span class="tag">唤醒</span> 唤醒帧分离 + KWS 二次验证（首帧 sequence_index=0）</div>
+  <div class="node-body">
+    仅当 <code>audio_wakeup_type ∈ [0, 2]</code>（主唤醒词/自定义唤醒）且 <code>wakeup_audio_length > 0</code>：
+    <ul>
+      <li>从 <code>binary_Data</code> 前部截取唤醒音频 → <code>wakeup_audio_data</code></li>
+      <li>剩余部分作为命令音频继续处理</li>
+      <li>若主唤醒词唤醒 + 业务类型启用了 KWS 过滤 + 唤醒帧 ≥ 48000 bytes（1.5s）：
+        <br>调用 <code>kws_infer_model(wakeup_audio_data)</code>（WeNet Conformer CTC）
+        <br>检测是否包含"你好萤石" → <code>kws_refilter_res = True/False</code></li>
+    </ul>
+    <span class="dim">唤醒类型：0=主唤醒词, 1=快捷, 2=自定义, 3=人脸, 4=点击, 5=免唤醒, 6=持续聆听</span>
+  </div>
+</div>
+
+<div class="arrow"><span class="arrow-label">binary_Data — 命令音频 PCM bytes（已去除唤醒帧部分，int16格式）</span></div>
+
+<!-- ===== 阶段2: 数据累积 ===== -->
+<div class="section-label">阶段二 · 数据累积与 VAD 检测</div>
+
+<div class="node pe">
+  <div class="node-title"><span class="tag">累积</span> 音频缓冲区追加</div>
+  <div class="node-body">
+    <code>self.data_online += binary_Data</code>
+    <br><code>self.decode_end += len(binary_Data)</code>
+    <br><span class="dim">stride_size = 60ms × 8 chunks × 16000Hz × 2 bytes = 15360 bytes（一个解码步长）</span>
+  </div>
+</div>
+
+<div class="arrow"></div>
+
+<div class="branch">
+  <div class="node py" style="flex:1.2;">
+    <div class="node-title"><span class="tag">VAD</span> 在线 VAD 检测（按业务类型启用）</div>
+    <div class="node-body">
+      当 <code>business_type ∈ vad_eable_type</code> 时启用：
+      <ol>
+        <li><span class="hl">语义完整性调整</span>：若上一轮有 ASR 输出，调用 <code>semantic_complete_prob.forward(last_asr_text)</code>（BERT 模型）
+          <br>→ 动态调整 <code>max_end_sil</code>（500ms~1300ms）
+          <br><span class="dim">语义越完整 → 静音等待越短 → 更快结束</span></li>
+        <li><span class="hl">FSMN VAD 推理</span>：<code>vad_online([binary_Data, "speech", "bytes"])</code>
+          <br>→ 返回 <code>vadsegments</code>：语音起止点（ms）</li>
+        <li>若检测到 <span class="hl">起始点</span>：记录 <code>vad_beg_point</code>，设置 <code>set_vad_beg = True</code></li>
+        <li>若检测到 <span class="hl">终止点</span>：截取有效音频段，强制 <code>is_final = True</code>（提前结束流）</li>
+      </ol>
+      <div class="fr">📄 asr/funasr/bin/asr_inference_paraformer_vad_tp.py : vadOnlineInfer</div>
+    </div>
+  </div>
+  <div class="node pp" style="flex:0.8;">
+    <div class="node-title"><span class="tag">跳过</span> VAD 未启用</div>
+    <div class="node-body">
+      当 <code>business_type ∉ vad_eable_type</code>：
+      <br>直接设置 <code>set_vad_beg = True</code>
+      <br>不做 VAD 检测，所有音频都参与识别
+    </div>
+  </div>
+</div>
+
+<div class="arrow"><span class="arrow-label">is_final — 流是否结束（可能被VAD提前触发）, data_online — 累积的完整音频缓冲区（可能被VAD截断到有效语音段）</span></div>
+
+<!-- ===== 阶段3: 2-Pass 核心 ===== -->
+<div class="section-label">阶段三 · 2-Pass ASR 推理（核心）</div>
+
+<div class="node pm" style="border-width:2px;">
+  <div class="node-title"><span class="tag">判断</span> 解码步长判断：(decode_end - decode_beg) ≥ stride_size ?</div>
+  <div class="node-body">
+    <code>stride_size</code> = 15360 bytes（480ms 音频）。只有累积够一个 stride 才触发流式解码。
+  </div>
+</div>
+
+<div class="arrow"></div>
+
+<div class="branch">
+  <div class="node pm" style="flex:1;">
+    <div class="node-title"><span class="tag">≥ stride</span> 累积数据足够</div>
+    <div class="node-body">
+      <div style="margin-bottom:10px; padding:8px; background:rgba(0,0,0,0.2); border-radius:6px;">
+        <div style="color:#c084fc; font-weight:700; font-size:12px; margin-bottom:4px;">情况 A：is_final = False（流未结束）</div>
+        <span class="hl">Pass-1 流式推理</span>：
+        <br><code>inference_online(data_online[decode_beg : decode_beg+stride_size])</code>
+        <br>→ ParaformerOnline chunk 推理 → 返回中间结果
+        <br><code>decode_beg += stride_size</code>
+      </div>
+      <div style="padding:8px; background:rgba(0,0,0,0.2); border-radius:6px;">
+        <div style="color:#c084fc; font-weight:700; font-size:12px; margin-bottom:4px;">情况 B：is_final = True（流结束）</div>
+        <span class="hl">Pass-2 离线纠正</span>（需 set_vad_beg=True）：
+        <br>① <code>inference_offline(data_online)</code> → SeacoParaformer 整段推理 → <span class="hl">最终纠正结果</span>
+        <br>② <code>inference_online(data_online, is_final=True)</code> → 重置流式 cache
+        <br><code>stage_flag = 1</code>（标记纠正完成）
+      </div>
+    </div>
+  </div>
+  <div class="node pm" style="flex:1;">
+    <div class="node-title"><span class="tag">< stride</span> 累积数据不足</div>
+    <div class="node-body">
+      <div style="padding:8px; background:rgba(0,0,0,0.2); border-radius:6px;">
+        <div style="color:#c084fc; font-weight:700; font-size:12px; margin-bottom:4px;">is_final = True 且 data_online > 3200 bytes（100ms）</div>
+        <span class="hl">Pass-2 离线纠正</span>（同上）：
+        <br>① <code>inference_offline(data_online)</code>
+        <br>② <code>inference_online(is_final=True)</code>
+        <br><code>stage_flag = 1</code>
+      </div>
+      <div style="margin-top:8px; padding:8px; background:rgba(0,0,0,0.2); border-radius:6px;">
+        <div style="color:#f87171; font-weight:700; font-size:12px; margin-bottom:4px;">is_final = True 但 data_online ≤ 3200 bytes</div>
+        音频过短，无法识别：
+        <br><code>AudioDecodeFail</code> 错误 → yield → return
+      </div>
+      <div style="margin-top:8px; padding:8px; background:rgba(0,0,0,0.2); border-radius:6px;">
+        <div style="color:#64748b; font-weight:700; font-size:12px; margin-bottom:4px;">is_final = False</div>
+        数据不够一个 stride → 不做任何推理，等待下一个 chunk
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow"><span class="arrow-label">asr_results_text = [{'value': '识别文本'}] — Pass-1返回中间结果(stage=0) 或 Pass-2返回纠正结果(stage=1)</span></div>
+
+<!-- ===== 阶段4: 流式模型细节 ===== -->
+<div class="section-label">阶段三补充 · Pass-1 流式模型推理细节</div>
+
+<div class="node pm" style="border-style:dashed;">
+  <div class="node-title"><span class="tag">Pass-1</span> inference_online.__call__() → Speech2Text.infer()</div>
+  <div class="node-body">
+    ParaformerOnline chunk-based 流式推理，带 cache 状态：
+    <ol>
+      <li><span class="hl">PCM → float32</span>：<code>load_bytes()</code> int16 归一化</li>
+      <li><span class="hl">WavFrontendOnline.forward()</span>：增量 FBank 提取 + LFR + CMVN（带 cache，跨 chunk 拼接）</li>
+      <li><span class="hl">encode_chunk()</span>：SANM 编码器 chunk 推理，利用 <code>cache["encoder"]</code> 保存跨 chunk 上下文
+        <br><span class="dim">chunk_size = [8, 8, 4]：左看 8 帧 + 当前 8 帧 + 右看 4 帧</span></li>
+      <li><span class="hl">calc_predictor_chunk()</span>：CIF 预测器增量推理，利用 <code>cif_hidden</code> / <code>cif_alphas</code> cache</li>
+      <li><span class="hl">cal_decoder_with_predictor_chunk()</span>：Decoder 增量推理，利用 <code>decode_fsmn</code> cache</li>
+      <li><span class="hl">贪心解码</span>：<code>argmax</code> → token → 文本拼接（中文直连，英文加空格，去 @@ 子词标记）</li>
+    </ol>
+    <span class="dim">cache 在 stream_reset 时清零，在每个 chunk 间传递，保证流式连续性</span>
+    <div class="fr">📄 asr/funasr/bin/asr_inference_paraformer_streaming.py : 497 (inference_online) → 239 (Speech2Text.infer)</div>
+  </div>
+</div>
+
+<div class="arrow"></div>
+
+<!-- ===== 阶段5: 声纹验证 ===== -->
+<div class="section-label">阶段四 · 声纹验证（仅 is_final 时触发）</div>
+
+<div class="node pr">
+  <div class="node-title"><span class="tag">声纹</span> Speaker Verification — ERes2NetV2</div>
+  <div class="node-body">
+    当 <code>business_type ∈ sv_eable_type</code> 且 <code>is_final</code> 且唤醒音频 > 1s 且命令音频 > 1s：
+    <ol>
+      <li><code>sv_model.inference(wakeup_audio, data_online)</code>
+        <br>→ 提取两段音频的 192 维 speaker embedding → 余弦相似度 <code>sv_result</code></li>
+      <li>若 <code>sv_result ≤ sv_sim_thres</code>（默认 0.3）→ 唤醒人与命令人不同：
+        <br>进一步计算响度差：<code>loudness_wakeup - loudness_cmd</code>（pyloudnorm LUFS）
+        <br>若响度差 ≥ <code>sv_loud_thres</code>（默认 6.5 dB）→ <span class="hl">清空识别结果</span>（静默不回答）</li>
+    </ol>
+    <span class="dim">场景：A 唤醒设备后 B 说话，且 A 声音明显更大 → 判定为误触发</span>
+    <div class="fr">📄 asr/speakerlab/bin/inference.py : speaker_verification</div>
+  </div>
+</div>
+
+<div class="arrow"></div>
+
+<!-- ===== 阶段6: 响应 ===== -->
+<div class="section-label">阶段五 · 响应封装与输出</div>
+
+<div class="node po">
+  <div class="node-title"><span class="tag">输出</span> 响应分支判断</div>
+  <div class="node-body">
+    <div style="margin-bottom:8px; padding:8px; background:rgba(0,0,0,0.2); border-radius:6px;">
+      <div style="color:#22d3ee; font-weight:700; font-size:12px; margin-bottom:4px;">✅ kws_refilter_res = True 且有识别文本</div>
+      <ul>
+        <li>累积文本：<code>last_asr_text += value.lower()</code></li>
+        <li>标记语义完整性待计算：<code>semantic_complete_flag = True</code></li>
+        <li>封装响应：<code>stage_flag</code>（0=中间结果, 1=纠正结果）, <code>sequence_index</code>, <code>sequence_end</code></li>
+        <li><code>Completion(modal="text", type="raw", data="识别文本")</code></li>
+        <li><code>yield rsp_msg</code> → 流式返回给客户端</li>
+        <li><code>sequence_index += 1</code></li>
+      </ul>
+    </div>
+    <div style="margin-bottom:8px; padding:8px; background:rgba(0,0,0,0.2); border-radius:6px;">
+      <div style="color:#f87171; font-weight:700; font-size:12px; margin-bottom:4px;">❌ 无识别文本 + is_final = True</div>
+      yield 空响应，<code>stage_flag=1</code>, <code>sequence_end=True</code>
+    </div>
+    <div style="padding:8px; background:rgba(0,0,0,0.2); border-radius:6px;">
+      <div style="color:#f87171; font-weight:700; font-size:12px; margin-bottom:4px;">❌ kws_refilter_res = False（唤醒词验证失败）</div>
+      yield 空响应，<code>stage_flag=1</code>, <code>sequence_end=True</code>（强制结束流）
+    </div>
+  </div>
+</div>
+
+</div><!-- end inner flow -->
+</div><!-- end loop-box -->
+
+<div class="arrow"><span class="arrow-label">下一个 chunk 到达 → 再次调用 stream_forward</span></div>
+
+<div class="node po" style="text-align:center; border-style:dashed;">
+  <div class="node-title" style="justify-content:center;"><span class="tag">结束</span> 流式会话结束</div>
+  <div class="node-body" style="text-align:left;">
+    当 <code>sequence_end = True</code> 的响应返回后，客户端停止发送。
+    <br>下次新会话从 <code>stream_init()</code> 重新开始。
+  </div>
+</div>
+
+</div><!-- end main flow -->
+
+<!-- ===== 时序图 ===== -->
+<div style="max-width:860px; margin:40px auto 0; padding:20px; background:#1e293b; border-radius:10px; border:1px solid #334155;">
+  <div style="font-size:14px; font-weight:700; color:#94a3b8; margin-bottom:14px;">📌 2-Pass 时序示意</div>
+  <pre style="font-size:11.5px; color:#94a3b8; line-height:1.6; font-family:'Cascadia Code','Fira Code',monospace; overflow-x:auto;">
+客户端          stream_forward              ParaformerOnline        SeacoParaformer
+  │                  │                          │                       │
+  │─── chunk 0 ────▶│                          │                       │
+  │                  │── PCM 累积 ──────────────│                       │
+  │                  │  (不够 stride, 不推理)    │                       │
+  │◀── success ─────│                          │                       │
+  │                  │                          │                       │
+  │─── chunk 1 ────▶│                          │                       │
+  │                  │── 够 stride ────────────▶│                       │
+  │                  │                          │── encode_chunk ──┐    │
+  │                  │                          │── CIF_chunk ─────┤    │
+  │                  │                          │── decode_chunk ──┘    │
+  │                  │◀── 中间结果 "你好" ──────│                       │
+  │◀─ stage=0 ──────│                          │                       │
+  │  "你好"          │                          │                       │
+  │                  │                          │                       │
+  │─── chunk 2 ────▶│                          │                       │
+  │                  │── 够 stride ────────────▶│                       │
+  │                  │◀── 中间结果 "你好萤" ────│                       │
+  │◀─ stage=0 ──────│                          │                       │
+  │  "你好萤"        │                          │                       │
+  │                  │                          │                       │
+  │─ chunk N(end) ─▶│                          │                       │
+  │                  │── is_final=True ─────────│── reset cache         │
+  │                  │                          │                       │
+  │                  │── 整段 data_online ──────────────────────────────▶│
+  │                  │                          │    encode(全段)        │
+  │                  │                          │    CIF(全段)           │
+  │                  │                          │    SeACo decode+热词   │
+  │                  │                          │    BeamSearch          │
+  │                  │◀── 纠正结果 "你好萤石" ──────────────────────────│
+  │◀─ <span style="color:#fbbf24;">stage=1</span> ──────│                          │                       │
+  │  <span style="color:#fbbf24;">"你好萤石"</span>      │                          │                       │
+  │  sequence_end    │                          │                       │
+  </pre>
+</div>
+
+<!-- ===== 关键参数 ===== -->
+<div style="max-width:860px; margin:20px auto 0; padding:20px; background:#1e293b; border-radius:10px; border:1px solid #334155;">
+  <div style="font-size:14px; font-weight:700; color:#94a3b8; margin-bottom:12px;">⚙️ 关键参数</div>
+  <table style="width:100%; font-size:12px; border-collapse:collapse;">
+    <tr style="border-bottom:1px solid #334155;">
+      <td style="padding:6px; color:#64748b; width:200px;">chunk_size</td>
+      <td style="padding:6px; color:#e2e8f0;">[8, 8, 4] — 左看 8 帧 + 当前 8 帧 + 右看 4 帧（每帧 60ms LFR 后）</td>
+    </tr>
+    <tr style="border-bottom:1px solid #334155;">
+      <td style="padding:6px; color:#64748b;">stride_size</td>
+      <td style="padding:6px; color:#e2e8f0;">15360 bytes = 60ms × 8 × 16000 × 2 = 480ms 音频</td>
+    </tr>
+    <tr style="border-bottom:1px solid #334155;">
+      <td style="padding:6px; color:#64748b;">vad_end_sil_init</td>
+      <td style="padding:6px; color:#e2e8f0;">800ms — VAD 默认静音等待阈值（可被语义完整性动态调整为 500~1300ms）</td>
+    </tr>
+    <tr style="border-bottom:1px solid #334155;">
+      <td style="padding:6px; color:#64748b;">sv_sim_thres</td>
+      <td style="padding:6px; color:#e2e8f0;">0.3 — 声纹相似度阈值（低于此值判定非同一人）</td>
+    </tr>
+    <tr style="border-bottom:1px solid #334155;">
+      <td style="padding:6px; color:#64748b;">sv_loud_thres</td>
+      <td style="padding:6px; color:#e2e8f0;">6.5 dB — 响度差阈值（唤醒音比命令音大 6.5dB 以上触发静默）</td>
+    </tr>
+    <tr style="border-bottom:1px solid #334155;">
+      <td style="padding:6px; color:#64748b;">stage_flag</td>
+      <td style="padding:6px; color:#e2e8f0;">0 = Pass-1 中间结果（流式），1 = Pass-2 纠正结果（离线）</td>
+    </tr>
+    <tr>
+      <td style="padding:6px; color:#64748b;">min audio for offline</td>
+      <td style="padding:6px; color:#e2e8f0;">3200 bytes = 100ms — 低于此长度不做离线纠正，返回错误</td>
+    </tr>
+  </table>
+</div>
+
+<!-- ===== 完整数据流时序图 ===== -->
+<div style="max-width:860px; margin:40px auto 0; padding:20px; background:#1e293b; border-radius:10px; border:1px solid #334155;">
+  <div style="font-size:14px; font-weight:700; color:#94a3b8; margin-bottom:14px;">📊 流式 ASR 完整数据流时序图（含 ms_manager 回调）</div>
+  <pre style="font-size:11.5px; color:#94a3b8; line-height:1.6; font-family:'Cascadia Code','Fira Code',monospace; overflow-x:auto;">
+┌────────┐       ┌────────────┐       ┌──────────────────┐    ┌────────────────┐    ┌───────────────┐    ┌───────────┐
+│ 客户端  │       │ ms_manager │       │EzvizModelBackend │    │ParaformerOnline│    │SeacoParaformer│    │ 回调服务   │
+└───┬────┘       └─────┬──────┘       └────────┬─────────┘    └───────┬────────┘    └───────┬───────┘    └─────┬─────┘
+    │                  │                       │                      │                     │                   │
+    │<span style="color:#60a5fa;">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>│
+    │<span style="color:#60a5fa;"> 阶段一：连接初始化                                                                                       </span>│
+    │<span style="color:#60a5fa;">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>│
+    │                  │                       │                      │                     │                   │
+    │ /stream_connect  │                       │                      │                     │                   │
+    │ (热词/格式/唤醒) │                       │                      │                     │                   │
+    │─────────────────▶│  stream_init()        │                      │                     │                   │
+    │                  │──────────────────────▶│                      │                     │                   │
+    │                  │                       │── stream_reset()     │                     │                   │
+    │                  │                       │   清空 data_online   │                     │                   │
+    │                  │                       │   重置 VAD/ASR cache │                     │                   │
+    │                  │                       │   解析参数           │                     │                   │
+    │                  │   rsp(200)            │                      │                     │                   │
+    │                  │◀──────────────────────│                      │                     │                   │
+    │  response(ok)    │                       │                      │                     │                   │
+    │◀─────────────────│                       │                      │                     │                   │
+    │                  │                       │                      │                     │                   │
+    │<span style="color:#22c55e;">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>│
+    │<span style="color:#22c55e;"> 阶段二：流式传输（重复 N 次）                                                                             </span>│
+    │<span style="color:#22c55e;">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>│
+    │                  │                       │                      │                     │                   │
+    │ /stream_process  │                       │                      │                     │                   │
+    │ (chunk0,end=F)   │                       │                      │                     │                   │
+    │─────────────────▶│  stream_forward()     │                      │                     │                   │
+    │                  │──────────────────────▶│                      │                     │                   │
+    │                  │                       │── b64 decode         │                     │                   │
+    │                  │                       │── opus decode(可选)  │                     │                   │
+    │                  │                       │── 唤醒帧分离+KWS    │                     │                   │
+    │                  │                       │── data_online += PCM │                     │                   │
+    │                  │                       │── 累积 < 480ms      │                     │                   │
+    │                  │   rsp(200,无文本)      │   <span style="color:#64748b;">不触发推理</span>         │                     │                   │
+    │                  │◀──────────────────────│                      │                     │                   │
+    │  response(ok)    │                       │                      │                     │                   │
+    │◀─────────────────│                       │                      │                     │                   │
+    │                  │                       │                      │                     │                   │
+    │  ···(继续发帧)   │                       │                      │                     │                   │
+    │                  │                       │                      │                     │                   │
+    │ /stream_process  │                       │                      │                     │                   │
+    │ (chunkN,end=F)   │                       │                      │                     │                   │
+    │─────────────────▶│  stream_forward()     │                      │                     │                   │
+    │                  │──────────────────────▶│                      │                     │                   │
+    │                  │                       │── 累积 ≥ 480ms      │                     │                   │
+    │                  │                       │                      │                     │                   │
+    │                  │                       │  <span style="color:#c084fc;">Pass-1 流式推理</span>     │                     │                   │
+    │                  │                       │  inference_online()  │                     │                   │
+    │                  │                       │─────────────────────▶│                     │                   │
+    │                  │                       │                      │── FBank(增量)       │                   │
+    │                  │                       │                      │── encode_chunk      │                   │
+    │                  │                       │                      │── CIF_chunk         │                   │
+    │                  │                       │                      │── decode_chunk      │                   │
+    │                  │                       │                      │── argmax→token      │                   │
+    │                  │                       │  "你好"              │                     │                   │
+    │                  │                       │◀─────────────────────│                     │                   │
+    │                  │                       │                      │                     │                   │
+    │                  │  yield rsp            │                      │                     │                   │
+    │                  │  (stage=0,"你好")     │                      │                     │                   │
+    │                  │◀──────────────────────│                      │                     │                   │
+    │                  │                       │                      │                     │                   │
+    │                  │  POST stream_result_url                      │                     │                   │
+    │                  │──────────────────────────────────────────────────────────────────────────────────────▶│
+    │                  │                       │                      │                     │          callback │
+    │                  │◀──────────────────────────────────────────────────────────────────────────────────────│
+    │                  │                       │                      │                     │                   │
+    │<span style="color:#fbbf24;">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>│
+    │<span style="color:#fbbf24;"> 阶段三：结束纠正（最后一帧）                                                                               </span>│
+    │<span style="color:#fbbf24;">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>│
+    │                  │                       │                      │                     │                   │
+    │ /stream_process  │                       │                      │                     │                   │
+    │ (末帧,end=T)     │                       │                      │                     │                   │
+    │─────────────────▶│  stream_forward()     │                      │                     │                   │
+    │                  │──────────────────────▶│                      │                     │                   │
+    │                  │                       │── is_final = True    │                     │                   │
+    │                  │                       │                      │                     │                   │
+    │                  │                       │  <span style="color:#c084fc;">Pass-2 离线纠正</span>     │                     │                   │
+    │                  │                       │  inference_offline() │                     │                   │
+    │                  │                       │────────────────────────────────────────────▶│                   │
+    │                  │                       │                      │                     │── FBank(全段)     │
+    │                  │                       │                      │                     │── LFR+CMVN        │
+    │                  │                       │                      │                     │── SANM Encoder    │
+    │                  │                       │                      │                     │── CIF Predictor   │
+    │                  │                       │                      │                     │── SeACo Decoder   │
+    │                  │                       │                      │                     │   + 热词增强      │
+    │                  │                       │                      │                     │── BeamSearch      │
+    │                  │                       │  "你好萤石"          │                     │                   │
+    │                  │                       │◀────────────────────────────────────────────│                   │
+    │                  │                       │                      │                     │                   │
+    │                  │                       │  inference_online    │                     │                   │
+    │                  │                       │  (is_final=True)     │                     │                   │
+    │                  │                       │─────────────────────▶│                     │                   │
+    │                  │                       │                      │── reset cache       │                   │
+    │                  │                       │◀─────────────────────│                     │                   │
+    │                  │                       │                      │                     │                   │
+    │                  │                       │── [可选] SV 声纹验证 │                     │                   │
+    │                  │                       │                      │                     │                   │
+    │                  │  yield rsp            │                      │                     │                   │
+    │                  │  (<span style="color:#fbbf24;">stage=1</span>,"你好萤石"  │                      │                     │                   │
+    │                  │   sequence_end=True)  │                      │                     │                   │
+    │                  │◀──────────────────────│                      │                     │                   │
+    │                  │                       │                      │                     │                   │
+    │                  │  POST stream_result_url                      │                     │                   │
+    │                  │──────────────────────────────────────────────────────────────────────────────────────▶│
+    │                  │                       │                      │                     │                   │
+    │                  │  POST release_notice  │                      │                     │                   │
+    │                  │──────────────────────────────────────────────────────────────────────────────────────▶│
+    │                  │                       │                      │                     │                   │
+    │<span style="color:#64748b;">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>│
+    │<span style="color:#64748b;"> 会话结束，等待下一次 stream_init                                                                          </span>│
+    │<span style="color:#64748b;">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>│
+  </pre>
+</div>
+
+<!-- ===== 整体架构图 ===== -->
+<div style="max-width:860px; margin:40px auto 0; padding:20px; background:#1e293b; border-radius:10px; border:1px solid #334155;">
+  <div style="font-size:14px; font-weight:700; color:#94a3b8; margin-bottom:14px;">🏗️ 流式 ASR 整体架构图（模型组件关系）</div>
+  <pre style="font-size:11px; color:#94a3b8; line-height:1.55; font-family:'Cascadia Code','Fira Code',monospace; overflow-x:auto;">
+┌──────────────────────────────────────────────────────────────────────────────────────────┐
+│                              <span style="color:#60a5fa;">EzvizModelBackend (流式 ASR 核心)</span>                              │
+│                                                                                          │
+│  ┌────────────────────────┐    ┌─────────────────────────┐    ┌──────────────────────┐   │
+│  │  <span style="color:#22c55e;">输入处理层</span>             │    │  <span style="color:#fbbf24;">前置滤波层</span>              │    │  <span style="color:#a855f7;">ASR 推理层 (2-Pass)</span> │   │
+│  │                        │    │                         │    │                      │   │
+│  │  ┌──────────────────┐  │    │  ┌──────────────────┐   │    │  ┌────────────────┐  │   │
+│  │  │ Base64 解码      │  │    │  │ <span style="color:#fb923c;">FSMN-VAD</span>         │   │    │  │ <span style="color:#c084fc;">ParaformerOnline</span>│  │   │
+│  │  │ (rqs_info.data)  │──┼───▶│  │ 语音边界检测     │   │    │  │ (Pass-1 流式)   │  │   │
+│  │  └──────────────────┘  │    │  │ vad.pb           │   │    │  │ - SANM Encoder │  │   │
+│  │           │            │    │  └──────────────────┘   │    │  │ - CIF Predictor│  │   │
+│  │           ▼            │    │           │             │    │  │ - 贪心解码     │  │   │
+│  │  ┌──────────────────┐  │    │           ▼             │    │  │ chunk=[8,8,4]  │  │   │
+│  │  │ Opus 解码 (可选) │  │    │  ┌──────────────────┐   │    │  └────────┬───────┘  │   │
+│  │  │ libopus + opuslib│  │    │  │ <span style="color:#fb923c;">语义完整性 BERT</span>  │   │    │           │          │   │
+│  │  │ 80B → 320 PCM    │  │    │  │ semantic_vad.pt  │   │    │           ▼          │   │
+│  │  └──────────────────┘  │    │  │ 动态调整 max_sil │   │    │  ┌────────────────┐  │   │
+│  │           │            │    │  └──────────────────┘   │    │  │ <span style="color:#c084fc;">SeacoParaformer</span>│  │   │
+│  │           ▼            │    │           │             │    │  │ (Pass-2 纠正)  │  │   │
+│  │  ┌──────────────────┐  │    │           ▼             │    │  │ - SANM Encoder │  │   │
+│  │  │ data_online      │  │    │  ┌──────────────────┐   │    │  │ - CIF Predictor│  │   │
+│  │  │ (PCM 缓冲区)     │  │    │  │ <span style="color:#fb923c;">KWS WeNet</span>        │   │    │  │ - SeACo+热词   │  │   │
+│  │  │ stride=480ms     │──┼───▶│  │ kws_model        │   │    │  │ - BeamSearch   │  │   │
+│  │  └──────────────────┘  │    │  │ 唤醒词二次验证   │   │    │  │   beam=10      │  │   │
+│  │                        │    │  └──────────────────┘   │    │  └────────────────┘  │   │
+│  └────────────────────────┘    └─────────────────────────┘    └──────────────────────┘   │
+│                                                                          │               │
+│                                                                          ▼               │
+│  ┌────────────────────────────────────────────────────────────┐   ┌──────────────────┐   │
+│  │  <span style="color:#ef4444;">后处理 / 安全层</span>                                          │   │  <span style="color:#22d3ee;">响应输出层</span>      │   │
+│  │                                                            │   │                  │   │
+│  │  ┌──────────────────┐    ┌──────────────────────────────┐  │   │ ┌──────────────┐ │   │
+│  │  │ <span style="color:#f87171;">ERes2NetV2 SV</span>    │    │ <span style="color:#f87171;">pyloudnorm 响度计</span>            │  │──▶│ │ Completion   │ │   │
+│  │  │ 声纹相似度       │───▶│ LUFS 响度差判断              │  │   │ │ stage_flag   │ │   │
+│  │  │ thres=0.3        │    │ thres=6.5dB                  │  │   │ │ sequence_idx │ │   │
+│  │  │ pretrained_eres2 │    │ 防误唤醒：唤醒人 vs 命令人   │  │   │ │ sequence_end │ │   │
+│  │  │ netv2.ckpt       │    │                              │  │   │ └──────────────┘ │   │
+│  │  └──────────────────┘    └──────────────────────────────┘  │   │       │          │   │
+│  └────────────────────────────────────────────────────────────┘   │       ▼          │   │
+│                                                                   │ yield rsp_msg    │   │
+│                                                                   └──────────────────┘   │
+│                                                                          │               │
+└──────────────────────────────────────────────────────────────────────────┼───────────────┘
+                                                                           │
+                                                                           ▼
+                                                              <span style="color:#22d3ee;">ms_manager 回调</span>
+                                                              POST stream_result_url
+
+<span style="color:#fbbf24;">━━━━ 配置入口（Apollo 配置中心动态下发）━━━━</span>
+   apollo_callback(value) → 更新 hotwords / vad_eable / sv_eable / kws_eable / 阈值
+  </pre>
+</div>
+
+<!-- ===== 模型组件清单 ===== -->
+<div style="max-width:860px; margin:20px auto 0; padding:20px; background:#1e293b; border-radius:10px; border:1px solid #334155;">
+  <div style="font-size:14px; font-weight:700; color:#94a3b8; margin-bottom:12px;">📦 模型组件清单</div>
+  <table style="width:100%; font-size:12px; border-collapse:collapse;">
+    <tr style="border-bottom:1px solid #475569; background:rgba(0,0,0,0.2);">
+      <td style="padding:8px; color:#64748b; font-weight:700;">组件</td>
+      <td style="padding:8px; color:#64748b; font-weight:700;">模型</td>
+      <td style="padding:8px; color:#64748b; font-weight:700;">权重路径</td>
+      <td style="padding:8px; color:#64748b; font-weight:700;">作用</td>
+    </tr>
+    <tr style="border-bottom:1px solid #334155;">
+      <td style="padding:8px; color:#c084fc;">流式 ASR</td>
+      <td style="padding:8px; color:#e2e8f0;">Paraformer-Streaming</td>
+      <td style="padding:8px; color:#94a3b8;">paraformer_streaming_model/</td>
+      <td style="padding:8px; color:#94a3b8;">低延迟出中间结果</td>
+    </tr>
+    <tr style="border-bottom:1px solid #334155;">
+      <td style="padding:8px; color:#c084fc;">非流式 ASR</td>
+      <td style="padding:8px; color:#e2e8f0;">SeacoParaformer</td>
+      <td style="padding:8px; color:#94a3b8;">seaco_paraformer_model/</td>
+      <td style="padding:8px; color:#94a3b8;">高精度纠正 + 热词增强</td>
+    </tr>
+    <tr style="border-bottom:1px solid #334155;">
+      <td style="padding:8px; color:#fb923c;">VAD</td>
+      <td style="padding:8px; color:#e2e8f0;">FSMN-VAD</td>
+      <td style="padding:8px; color:#94a3b8;">model_vad_fsmn/</td>
+      <td style="padding:8px; color:#94a3b8;">声学语音边界检测</td>
+    </tr>
+    <tr style="border-bottom:1px solid #334155;">
+      <td style="padding:8px; color:#fb923c;">语义完整性</td>
+      <td style="padding:8px; color:#e2e8f0;">BERT 分类器</td>
+      <td style="padding:8px; color:#94a3b8;">semantic_vad/</td>
+      <td style="padding:8px; color:#94a3b8;">动态调整 VAD 静音阈值</td>
+    </tr>
+    <tr style="border-bottom:1px solid #334155;">
+      <td style="padding:8px; color:#fb923c;">KWS</td>
+      <td style="padding:8px; color:#e2e8f0;">WeNet Conformer-CTC</td>
+      <td style="padding:8px; color:#94a3b8;">kws_model/</td>
+      <td style="padding:8px; color:#94a3b8;">唤醒词二次验证</td>
+    </tr>
+    <tr style="border-bottom:1px solid #334155;">
+      <td style="padding:8px; color:#f87171;">声纹</td>
+      <td style="padding:8px; color:#e2e8f0;">ERes2NetV2</td>
+      <td style="padding:8px; color:#94a3b8;">sv_model/</td>
+      <td style="padding:8px; color:#94a3b8;">说话人验证（防误触发）</td>
+    </tr>
+    <tr>
+      <td style="padding:8px; color:#22c55e;">音频解码</td>
+      <td style="padding:8px; color:#e2e8f0;">libopus</td>
+      <td style="padding:8px; color:#94a3b8;">系统库</td>
+      <td style="padding:8px; color:#94a3b8;">Opus → PCM</td>
+    </tr>
+  </table>
+</div>
+
+<!-- ===== 音频数据流转图 ===== -->
+<div style="max-width:860px; margin:40px auto 0; padding:20px; background:#1e293b; border-radius:10px; border:1px solid #334155;">
+  <div style="font-size:14px; font-weight:700; color:#94a3b8; margin-bottom:14px;">🎵 音频数据流转图（数据格式 + 大小变换）</div>
+  <pre style="font-size:11px; color:#94a3b8; line-height:1.55; font-family:'Cascadia Code','Fira Code',monospace; overflow-x:auto;">
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  <span style="color:#60a5fa;">客户端（IoT 设备 / APP）</span>                                                    │
+│                                                                             │
+│  ┌──────────────────┐                                                       │
+│  │ 麦克风采集       │  PCM int16, 16kHz, mono, 2 bytes/sample                │
+│  │ (16kHz 采样)     │  → 1 秒音频 = 32000 bytes                              │
+│  └────────┬─────────┘                                                       │
+│           │                                                                 │
+│           ▼                                                                 │
+│  ┌──────────────────┐                                                       │
+│  │ Opus 编码 (可选) │  20ms 帧 = 320 samples → ~80 bytes 编码               │
+│  │ 32kbps 码率      │  压缩比 ~16x                                          │
+│  └────────┬─────────┘                                                       │
+│           │                                                                 │
+│           ▼                                                                 │
+│  ┌──────────────────┐                                                       │
+│  │ Base64 编码      │  二进制 → ASCII 字符串（体积 +33%）                    │
+│  └────────┬─────────┘                                                       │
+└───────────┼─────────────────────────────────────────────────────────────────┘
+            │ HTTP POST (JSON)
+            │ {"data_info": [{"data": "base64string..."}], "sequence_index": N}
+            ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  <span style="color:#22c55e;">服务端 ms_manager</span>                                                          │
+│            │                                                                │
+│            │ gRPC                                                           │
+│            ▼                                                                │
+└────────────┼────────────────────────────────────────────────────────────────┘
+             │
+             ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  <span style="color:#a855f7;">EzvizModelBackend.stream_forward()</span>                                         │
+│                                                                             │
+│  Step 1: <span style="color:#fbbf24;">base64_decode()</span>                                                  │
+│    "base64string..." (str)  →  b64Decode_Data (bytes)                       │
+│                                                                             │
+│  Step 2: <span style="color:#fbbf24;">opus 解码（若 format==opus）</span>                                     │
+│    每 80 bytes Opus → opus_dec.decode(frame_size=320) → 640 bytes PCM       │
+│    (20ms 音频, 320 samples × int16)                                         │
+│                                                                             │
+│  Step 3: <span style="color:#fbbf24;">唤醒帧分离（仅首帧 sequence_index=0）</span>                            │
+│    binary_Data[:wakeup_audio_length] → wakeup_audio_data (用于 SV/KWS)      │
+│    binary_Data[wakeup_audio_length:] → 命令音频继续处理                     │
+│                                                                             │
+│  Step 4: <span style="color:#fbbf24;">int16 对齐填充</span>                                                  │
+│    if len(binary_Data) % 2 != 0: binary_Data += b'\x00'                     │
+│                                                                             │
+│  Step 5: <span style="color:#fbbf24;">累积到缓冲区</span>                                                    │
+│    self.data_online += binary_Data                                          │
+│    self.decode_end += len(binary_Data)                                      │
+│                                                                             │
+│  Step 6: <span style="color:#fbbf24;">VAD 截断（若启用）</span>                                              │
+│    vad_online([binary_Data, "speech", "bytes"])                             │
+│    检测到终止点 → data_online = data_online[vad_beg:vad_end]                │
+│                                                                             │
+│  Step 7: <span style="color:#fbbf24;">推理输入构造</span>                                                    │
+│    流式 Pass-1：data_online[decode_beg : decode_beg+stride_size] (480ms)    │
+│    离线 Pass-2：data_online[全部] (整段)                                    │
+│                                                                             │
+│  Step 8: <span style="color:#fbbf24;">PCM → float32 归一化</span>                                            │
+│    int16 / 2^15 = float32 [-1.0, 1.0]                                       │
+│                                                                             │
+│  Step 9: <span style="color:#fbbf24;">FBank 特征提取</span>                                                  │
+│    waveform → kaldi.fbank → 80 维 Mel 滤波器组特征 [T, 80]                  │
+│    25ms 帧长, 10ms 帧移, Hamming 窗                                         │
+│                                                                             │
+│  Step 10: <span style="color:#fbbf24;">LFR 拼帧</span>                                                       │
+│    [T, 80] → [T/6, 560] (m=7, n=6 拼接相邻帧)                               │
+│                                                                             │
+│  Step 11: <span style="color:#fbbf24;">CMVN 归一化</span>                                                    │
+│    (feat - mean) / std (从 am.mvn 加载统计量)                               │
+│                                                                             │
+│  Step 12: <span style="color:#fbbf24;">模型推理</span>                                                       │
+│    feat → Encoder → Decoder → token_ids                                     │
+│                                                                             │
+│  Step 13: <span style="color:#fbbf24;">Token → 文本</span>                                                   │
+│    token_ids → ids2tokens → sentence_postprocess → "你好萤石"               │
+│                                                                             │
+│  Step 14: <span style="color:#fbbf24;">封装响应</span>                                                       │
+│    Completion(modal="text", type="raw", data="你好萤石") → yield            │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+<span style="color:#fbbf24;">━━━━ 数据格式与大小汇总 ━━━━</span>
+   <span style="color:#64748b;">阶段                    数据类型           1秒音频大小</span>
+   ──────────────────────────────────────────────────────
+   原始 PCM int16          bytes              32,000 bytes (32 KB)
+   Opus 编码后             bytes              ~4,000 bytes (压缩 8x)
+   Base64 编码后           str                ~5,400 chars (+33%)
+   PCM float32 归一化      np.float32 array   64,000 bytes (16,000 samples × 4 bytes)
+   FBank [T, 80]           np.float32         ~32,000 bytes (T≈100 帧)
+   LFR [T/6, 560]          np.float32         ~37,000 bytes (T'≈17 帧 × 560)
+   Encoder Output          torch.float32      ~17,000 bytes (T''≈17 × 256 hidden)
+   识别文本                str                ~10-20 chars
+  </pre>
+</div>
+
+<!-- ===== 决策树 ===== -->
+<div style="max-width:860px; margin:40px auto 0; padding:20px; background:#1e293b; border-radius:10px; border:1px solid #334155;">
+  <div style="font-size:14px; font-weight:700; color:#94a3b8; margin-bottom:14px;">🌳 stream_forward 决策树（条件分支全景）</div>
+  <pre style="font-size:11px; color:#94a3b8; line-height:1.5; font-family:'Cascadia Code','Fira Code',monospace; overflow-x:auto;">
+                          ┌──────────────────────┐
+                          │ stream_forward 入口  │
+                          └──────────┬───────────┘
+                                     │
+                ┌────────────────────▼────────────────────┐
+                │ <span style="color:#60a5fa;">Q1: 入参合法？</span>                          │
+                │ data_info长度=1 && modal=audio          │
+                │ && type=base64                          │
+                └────┬────────────────────────────────┬───┘
+                     │ 否                              │ 是
+                     ▼                                 ▼
+            ┌────────────────┐               ┌────────────────────┐
+            │ InvalidParam   │               │ <span style="color:#60a5fa;">Q2: debug 模式？</span>    │
+            │ sequence_end=T │               └────┬──────────┬────┘
+            │ yield + return │                    │ 是        │ 否
+            └────────────────┘                    ▼           │
+                                       ┌──────────────────┐   │
+                                       │ 返回固定文本      │   │
+                                       │ "debug模式"       │   │
+                                       │ yield + return    │   │
+                                       └──────────────────┘   │
+                                                              ▼
+                                              ┌────────────────────────┐
+                                              │ <span style="color:#22c55e;">Q3: base64 解码成功？</span> │
+                                              └────┬──────────────┬────┘
+                                                   │ 否            │ 是
+                                                   ▼               ▼
+                                          ┌──────────────┐  ┌────────────────────┐
+                                          │ Padding错误   │  │ <span style="color:#22c55e;">Q4: format=opus?</span>   │
+                                          │ yield+return  │  └────┬──────────┬────┘
+                                          └──────────────┘       │ 是        │ 否
+                                                                 ▼           ▼
+                                                       ┌──────────────┐    │
+                                                       │ Opus 解码     │    │
+                                                       │ (80B→320PCM) │    │
+                                                       │ 失败→错误返回 │    │
+                                                       └──────┬───────┘    │
+                                                              │            │
+                                                              └─────┬──────┘
+                                                                    ▼
+                                              ┌──────────────────────────────────┐
+                                              │ <span style="color:#fb923c;">Q5: 首帧 && 主/自定义唤醒</span>      │
+                                              │     && wakeup_length>0 ?         │
+                                              └──┬─────────────────────────────┬─┘
+                                                 │ 是                           │ 否
+                                                 ▼                              │
+                                        ┌────────────────────────┐              │
+                                        │ 分离唤醒帧              │              │
+                                        │ wakeup_audio_data       │              │
+                                        │ <span style="color:#fb923c;">Q5.1: KWS 启用?</span>      │              │
+                                        │  └─是→ KWS二次验证       │              │
+                                        │       (kws_refilter_res)│              │
+                                        └────────────┬───────────┘              │
+                                                     │                          │
+                                                     └──────────────┬───────────┘
+                                                                    ▼
+                                              ┌──────────────────────────────────┐
+                                              │ data_online += binary_Data       │
+                                              │ <span style="color:#eab308;">Q6: VAD 启用?</span>                  │
+                                              └──┬─────────────────────────────┬─┘
+                                                 │ 是                           │ 否
+                                                 ▼                              ▼
+                                        ┌────────────────────────┐    ┌────────────────┐
+                                        │ <span style="color:#eab308;">Q6.1: 上轮有文本?</span>    │    │ set_vad_beg=T  │
+                                        │  └─是→ BERT 计算 max_sil│    │ 全部音频参与   │
+                                        │       semantic_complete │    └────────────────┘
+                                        │ FSMN-VAD 推理           │            │
+                                        │ <span style="color:#eab308;">Q6.2: 检测到边界?</span>    │            │
+                                        │  ├─起点→ vad_beg_point  │            │
+                                        │  └─终点→ is_final=True  │            │
+                                        └────────────┬───────────┘            │
+                                                     │                        │
+                                                     └────────────┬───────────┘
+                                                                  ▼
+                                              ┌────────────────────────────────────┐
+                                              │ <span style="color:#a855f7;">Q7: decode_end-decode_beg ≥</span>      │
+                                              │     <span style="color:#a855f7;">stride_size (480ms)?</span>          │
+                                              └──┬───────────────────────────────┬─┘
+                                                 │ 是                             │ 否
+                                                 ▼                                ▼
+                                ┌─────────────────────────────────┐  ┌───────────────────────────┐
+                                │ <span style="color:#a855f7;">Q7.1: is_final?</span>                  │  │ <span style="color:#a855f7;">Q8: is_final && set_vad_beg?</span>│
+                                └──┬──────────────────────────┬───┘  └──┬─────────────────────┬──┘
+                                   │ 否                        │ 是      │ 是                   │ 否
+                                   ▼                           │         ▼                     ▼
+                          ┌─────────────────┐                  │  ┌──────────────────┐  ┌─────────┐
+                          │ <span style="color:#a855f7;">Pass-1 流式推理</span>  │                  │  │ <span style="color:#a855f7;">Q8.1: 长度&gt;3200?</span> │  │ 跳过推理│
+                          │ ParaformerOnline│                  │  │ (100ms 阈值)     │  │ 等下一帧│
+                          │ stage_flag=0    │                  │  └──┬───────────┬───┘  └─────────┘
+                          │ 中间结果        │                  │     │ 是         │ 否
+                          └─────────────────┘                  │     ▼            ▼
+                                                               │  ┌────────────┐  ┌───────────────┐
+                                                               │  │ <span style="color:#a855f7;">Pass-2 纠正</span>│  │ AudioDecodeFail│
+                                                               │  │ stage=1    │  │ 太短不识别     │
+                                                               │  └────────────┘  └───────────────┘
+                                                               │
+                                                               ▼
+                                              ┌────────────────────────────────────┐
+                                              │ <span style="color:#a855f7;">Q9: set_vad_beg=True?</span>            │
+                                              │ (启用VAD时未检测到起点则跳过)      │
+                                              └──┬───────────────────────────────┬─┘
+                                                 │ 是                             │ 否（跳过纠正）
+                                                 ▼                                │
+                                        ┌────────────────────────┐                │
+                                        │ <span style="color:#a855f7;">Pass-2 离线纠正</span>         │                │
+                                        │ inference_offline      │                │
+                                        │ SeacoParaformer+BeamSrch│                │
+                                        │ stage_flag=1           │                │
+                                        └────────────┬───────────┘                │
+                                                     │                            │
+                                                     └────────────┬───────────────┘
+                                                                  ▼
+                                              ┌────────────────────────────────────┐
+                                              │ <span style="color:#ef4444;">Q10: SV 启用 && is_final &&</span>      │
+                                              │      <span style="color:#ef4444;">wakeup&gt;1s && cmd&gt;1s?</span>          │
+                                              └──┬───────────────────────────────┬─┘
+                                                 │ 是                             │ 否
+                                                 ▼                                │
+                                        ┌────────────────────────┐                │
+                                        │ ERes2NetV2 提取声纹     │                │
+                                        │ <span style="color:#ef4444;">Q10.1: sv_result≤0.3?</span>  │                │
+                                        │  └─是→ 计算响度差        │                │
+                                        │       <span style="color:#ef4444;">Q10.2: diff≥6.5dB?</span>   │                │
+                                        │        └─是→ 清空文本    │                │
+                                        └────────────┬───────────┘                │
+                                                     │                            │
+                                                     └────────────┬───────────────┘
+                                                                  ▼
+                                              ┌────────────────────────────────────┐
+                                              │ <span style="color:#22d3ee;">Q11: kws_refilter_res &&</span>          │
+                                              │      <span style="color:#22d3ee;">asr_text 非空?</span>                 │
+                                              └──┬───────────────────────────────┬─┘
+                                                 │ 是                             │ 否
+                                                 ▼                                ▼
+                                        ┌────────────────────────┐    ┌────────────────────┐
+                                        │ ✅ 正常输出             │    │ <span style="color:#22d3ee;">Q11.1: is_final?</span>     │
+                                        │ last_asr_text+=text    │    └──┬─────────────┬──┘
+                                        │ semantic_flag=True     │       │ 是           │ 否
+                                        │ yield rsp_msg          │       ▼              ▼
+                                        │ sequence_index += 1    │  ┌──────────┐  ┌──────────────┐
+                                        └────────────────────────┘  │ yield 空 │  │ <span style="color:#22d3ee;">Q11.2: kws失败?</span>│
+                                                                    │ stage=1  │  └──┬───────────┘
+                                                                    │ end=True │     │ 是
+                                                                    └──────────┘     ▼
+                                                                                 ┌──────────┐
+                                                                                 │ yield 空 │
+                                                                                 │ stage=1  │
+                                                                                 │ end=True │
+                                                                                 │ (强制结束)│
+                                                                                 └──────────┘
+
+<span style="color:#fbbf24;">━━━━ 关键决策点说明 ━━━━</span>
+  <span style="color:#60a5fa;">Q1-Q4</span>: 入参与解码层 — 失败立即返回错误
+  <span style="color:#fb923c;">Q5</span>:    唤醒帧处理 — 仅首帧执行，分离唤醒音用于后续 SV/KWS
+  <span style="color:#eab308;">Q6</span>:    VAD 决策 — 按业务类型启用，BERT 动态调整尾部静音
+  <span style="color:#a855f7;">Q7-Q9</span>: 推理决策 — stride 累积控制流式触发，is_final 触发 Pass-2
+  <span style="color:#ef4444;">Q10</span>:   声纹安全 — 双重判断（声纹+响度），过滤误唤醒
+  <span style="color:#22d3ee;">Q11</span>:   响应输出 — 三种分支：正常输出 / 空文本结束 / KWS失败强制结束
+  </pre>
+</div>
+
+<!-- ===== 对比表 ===== -->
+<div style="max-width:860px; margin:20px auto 0; padding:20px; background:#1e293b; border-radius:10px; border:1px solid #334155;">
+  <div style="font-size:14px; font-weight:700; color:#94a3b8; margin-bottom:12px;">⚡ 流式 vs 非流式 对比</div>
+  <table style="width:100%; font-size:12px; border-collapse:collapse;">
+    <tr style="border-bottom:1px solid #475569; background:rgba(0,0,0,0.2);">
+      <td style="padding:8px; color:#64748b; font-weight:700; width:160px;"></td>
+      <td style="padding:8px; color:#60a5fa; font-weight:700;">非流式 (forward)</td>
+      <td style="padding:8px; color:#c084fc; font-weight:700;">流式 (stream_forward)</td>
+    </tr>
+    <tr style="border-bottom:1px solid #334155;">
+      <td style="padding:8px; color:#64748b;">调用方式</td>
+      <td style="padding:8px; color:#e2e8f0;">单次 POST，完整音频</td>
+      <td style="padding:8px; color:#e2e8f0;">stream_init + 多次 stream_forward</td>
+    </tr>
+    <tr style="border-bottom:1px solid #334155;">
+      <td style="padding:8px; color:#64748b;">模型</td>
+      <td style="padding:8px; color:#e2e8f0;">SeacoParaformer（一次推理）</td>
+      <td style="padding:8px; color:#e2e8f0;">ParaformerOnline（中间）+ SeacoParaformer（纠正）</td>
+    </tr>
+    <tr style="border-bottom:1px solid #334155;">
+      <td style="padding:8px; color:#64748b;">延迟</td>
+      <td style="padding:8px; color:#e2e8f0;">需等音频传完才出结果</td>
+      <td style="padding:8px; color:#e2e8f0;">每 480ms 出一次中间结果</td>
+    </tr>
+    <tr style="border-bottom:1px solid #334155;">
+      <td style="padding:8px; color:#64748b;">精度</td>
+      <td style="padding:8px; color:#e2e8f0;">高（SeACo + BeamSearch + 热词）</td>
+      <td style="padding:8px; color:#e2e8f0;">中间结果较低（贪心），最终纠正后与非流式一致</td>
+    </tr>
+    <tr style="border-bottom:1px solid #334155;">
+      <td style="padding:8px; color:#64748b;">输入格式</td>
+      <td style="padding:8px; color:#e2e8f0;">base64 / url（pcm/wav/opus/aac）</td>
+      <td style="padding:8px; color:#e2e8f0;">base64（pcm 或 opus 裸流）</td>
+    </tr>
+    <tr style="border-bottom:1px solid #334155;">
+      <td style="padding:8px; color:#64748b;">VAD</td>
+      <td style="padding:8px; color:#e2e8f0;">不使用</td>
+      <td style="padding:8px; color:#e2e8f0;">可选启用（FSMN VAD + 语义完整性）</td>
+    </tr>
+    <tr style="border-bottom:1px solid #334155;">
+      <td style="padding:8px; color:#64748b;">声纹验证</td>
+      <td style="padding:8px; color:#e2e8f0;">不使用</td>
+      <td style="padding:8px; color:#e2e8f0;">可选启用（ERes2NetV2）</td>
+    </tr>
+    <tr>
+      <td style="padding:8px; color:#64748b;">结果回调</td>
+      <td style="padding:8px; color:#e2e8f0;">直接 HTTP 响应返回</td>
+      <td style="padding:8px; color:#e2e8f0;">ms_manager POST 到 stream_result_url</td>
+    </tr>
+  </table>
+</div>
+
+</body>
+</html>

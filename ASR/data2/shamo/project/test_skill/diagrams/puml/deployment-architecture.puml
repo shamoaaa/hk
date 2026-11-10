@@ -1,0 +1,53 @@
+@startuml
+skinparam defaultFontName "Microsoft YaHei"
+skinparam shadowing false
+skinparam linetype ortho
+skinparam nodesep 14
+skinparam ranksep 20
+skinparam node {
+  BackgroundColor #F0F0F0
+  BorderColor #333333
+}
+
+node "共享基础设施（全局唯一，始终运行）" as Shared {
+  component "Nginx（反向代理）" as Nginx #F0F0F0
+  component "Web前端容器（Vue.js）" as WebC #F0F0F0
+  component "API服务容器（FastAPI）" as ApiC #F0F0F0
+  database "MySQL" as MySQL
+  database "Redis" as Redis
+  Nginx --> WebC
+  WebC --> ApiC
+  ApiC --> MySQL
+  ApiC --> Redis
+}
+
+node "项目A 容器" as ProjA {
+  component "Agent引擎（用户独立实例）" as AgentA #F0F0F0
+  component "领域技能层（10 Skills）" as SkillA #F0F0F0
+  component "远程训练适配" as AdaptA #F0F0F0
+  AgentA -[hidden]-> SkillA
+  SkillA -[hidden]-> AdaptA
+  note bottom of AdaptA
+    挂载: /data/projects/proj_a/
+    configs/ | datasets/ | models/ | workspace/ | outputs/
+  end note
+}
+
+node "项目B 容器" as ProjB {
+  component "Agent引擎（用户独立实例）" as AgentB #F0F0F0
+  component "领域技能层（10 Skills）" as SkillB #F0F0F0
+  component "远程训练适配" as AdaptB #F0F0F0
+  AgentB -[hidden]-> SkillB
+  SkillB -[hidden]-> AdaptB
+  note bottom of AdaptB
+    挂载: /data/projects/proj_b/
+  end note
+}
+
+node "远程 GPU 训练集群" as GPU
+
+ApiC ..> ProjA
+ApiC ..> ProjB
+ProjA ..> GPU
+ProjB ..> GPU
+@enduml

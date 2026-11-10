@@ -1,0 +1,14 @@
+{
+    "PortManager": {
+        "FLASK_port": 25040,
+        "port_start": 25041
+    },
+    "ModelConfig": {
+        "log_level": 10,
+        "GPU_start_idx": 7,
+        "backend_GPUmem": 4.0,
+        "stream_task_timeout": 45.0,
+        "MAX_GPU": 1,
+        "max_backend": 1
+    }
+}

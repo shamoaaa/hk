@@ -1,0 +1,67 @@
+# 训练配置 — 经实战验证的配方
+# 目标: SeaCo-Paraformer large 单卡 RTX 4090D (49GB) 微调
+# 验证日期: 2026-07-03
+
+training:
+  # === 批次配置 ===
+  batch_size: 64                 # 64 已验证：每epoch~2min，10epoch~20min
+  batch_type: example            # example 模式
+  accum_grad: 1                  # 不累积
+  max_token_length: 250          # 帧数上限
+
+  # === 训练配方 ===
+  max_epoch: 10
+  learning_rate: 0.0001           # 1e-4（COARSE阶段加速收敛）
+  warmup_steps: 20               # 快速 warmup
+  validate_interval: 9999        # 不做中间验证
+  save_checkpoint_interval: 9999 # 不做中间保存（仅 epoch 结束时）
+  keep_nbest_models: 5
+  avg_nbest_model: 5
+  find_unused_parameters: true
+  log_interval: 20
+
+  # === 冻结参数（只微调 encoder/decoder/predictor）===
+  freeze_param: '["hotword_output_layer","seaco_decoder"]'
+
+  # === GPU 分配 ===
+  distributed:
+    nnodes: 1
+    nproc_per_node: 1            # 单卡
+    cuda_visible_devices: "3"    # GPU 3（当前最空闲），峰值显存 ~29GB
+
+  # === 数据加载 ===
+  dataloader:
+    num_workers: 0               # 单线程（num_workers>0会OOM）
+
+# === 质量阈值 & 切分 ===
+# 定义在 configs/asr_evolve.yaml 中（pipeline 配置）
+# 此处不重复定义
+
+# === 训练健康监控（改进方向 #1 #2）===
+health_monitors:
+  loss_spike:
+    threshold: 3.0           # loss 单步跳变超过 3 倍视为 spike
+    action: "log_warning"
+  gradient_norm:
+    max: 10.0
+    action: "clip_and_warn"
+  nan_detection:
+    action: "stop_immediately"
+  convergence_stall:
+    window: 50               # 50 步内 loss 无下降
+    action: "reduce_lr_or_stop"
+
+# === 有界干预空间（AI Training Manager 设计）===
+bounds:
+  lr_multiplier: [0.3, 3.0]
+  early_stop_patience: 3
+  max_grad_norm_threshold: 10.0
+
+# === Probe 配置（改进方向 #3）===
+probe:
+  enabled: true
+  max_epoch: 2
+  pass_threshold:
+    val_loss_decrease: 0.01  # 2 epoch 内 loss 需下降 1%
+  on_pass: "submit_full_training"
+  on_fail: "prune_branch"

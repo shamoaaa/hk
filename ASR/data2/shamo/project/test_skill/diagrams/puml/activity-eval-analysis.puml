@@ -1,0 +1,27 @@
+@startuml
+skinparam defaultFontName "Microsoft YaHei"
+skinparam shadowing false
+
+|evaluate_model 技能|
+start
+:Agent 调用 evaluate_model 技能;
+:加载模型 checkpoint;
+:对测试集执行推理;
+:规则型评估器计算指标\n（CER / 指令召回率 / Stripped_CER）;
+:生成 badcase 清单\n（CER > 阈值的样本）;
+:按设备/场景维度聚合统计;
+:结果持久化到数据库;
+
+|analyze_results 技能|
+:Agent 调用 analyze_results 技能;
+:读取 badcase 清单;
+:统计错误类型分布\n（替换/插入/删除）;
+:提取 Top-N 混淆对;
+:LLM型评估器：对 badcase 做语义归因分析;
+:按设备/场景定位薄弱环节;
+:生成结构化分析报告，持久化到数据库;
+
+|Agent REFLECT 阶段|
+:读取分析报告 → 决定下一步优化方向;
+stop
+@enduml

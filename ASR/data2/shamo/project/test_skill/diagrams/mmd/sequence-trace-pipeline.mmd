@@ -1,0 +1,13 @@
+sequenceDiagram
+    autonumber
+    participant Cycle as Agent决策循环
+    participant Logger as Trajectory Logger
+    participant DB as MySQL数据库
+    participant Web as Web控制台Trace视图
+
+    Cycle->>Logger: 产生Span数据
+    note right of Logger: 记录每轮决策：Span类型<br/>调用技能名、耗时<br/>输入摘要、输出摘要、执行状态
+    Logger->>DB: 持久化
+    note right of DB: trace表：id、experiment_id、round<br/>user_id、status、total_duration_ms<br/>trace_span表：type、skill_name<br/>duration_ms、input_summary、output_summary
+    DB->>Web: 查询展示
+    note right of Web: 时间线展示、筛选与搜索、详情展开<br/>跨实验对比、决策审计<br/>可追溯任意决策的完整依据与执行过程

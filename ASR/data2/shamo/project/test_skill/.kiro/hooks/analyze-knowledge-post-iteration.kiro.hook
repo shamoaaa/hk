@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "Analyze Knowledge After Iteration",
+  "description": "After an ASR-Evolve iteration completes, Kiro analyzes the auto-generated knowledge entries and replaces placeholder suggestions with expert ASR optimization advice.",
+  "version": "1.0.0",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "**/asr-evolve/logs/execution_log.jsonl"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "ASR-Evolve 迭代刚完成（execution_log.jsonl 已更新）。请执行以下操作：\n\n1. 运行 knowledge view 查看知识库中是否有 suggestion 包含 '[待Kiro分析]' 的条目\n2. 如果有，对每条知识根据其 finding 和 evidence_type 进行专业分析：\n   - sub_anomaly（替换对异常）：判断是高频常用字混淆（不适合加热词，建议增加训练数据）还是专有名词/领域词（适合加热词）\n   - ctx_anomaly（上下文聚类）：判断 trigram 是否为有意义的词组（适合热词）还是普通字序列（需要更多训练数据）\n   - scene_interaction（场景交叉）：根据错误类型建议对应增强策略（insertion→babble, deletion→reverb, substitution→训练数据）\n   - position_skew（位置偏斜）：分析可能的预处理问题（截断/VAD/padding）\n3. 用 Python 脚本更新 knowledge_entries 表中对应条目的 content_json，将 suggestion 字段替换为你的专业分析\n4. 如果没有待分析的条目，不做任何操作\n\n工作目录：d:\\project\\ASR\\data2\\shamo\\project\\test_skill\\asr-evolve\n运行命令前缀：& \".venv\\Scripts\\python.exe\" -m asr_evolve.cli --base-dir ."
+  }
+}

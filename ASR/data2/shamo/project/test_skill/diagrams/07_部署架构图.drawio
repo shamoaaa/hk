@@ -1,0 +1,94 @@
+<mxfile host="65bd71144e">
+    <diagram name="部署架构" id="deploy">
+        <mxGraphModel dx="957" dy="726" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="570" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="2" value="" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333" parent="1" vertex="1">
+                    <mxGeometry x="30" y="10" width="790" height="140" as="geometry"/>
+                </mxCell>
+                <mxCell id="2t" value="共享基础设施（全局唯一，始终运行）" style="text;fontSize=10;fontStyle=1;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="260" y="15" width="300" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="3" value="Nginx&#10;（反向代理）" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=8;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="50" y="45" width="110" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="4" value="Web前端容器&#10;（Vue.js）" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=8;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="180" y="45" width="110" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="5" value="API服务容器&#10;（FastAPI）" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=8;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="310" y="45" width="110" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="6" value="MySQL" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=9;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="500" y="45" width="90" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="7" value="Redis" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=9;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="500" y="90" width="90" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" style="strokeColor=#333333" parent="1" source="3" target="4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" style="strokeColor=#333333" parent="1" source="4" target="5" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" style="strokeColor=#333333" parent="1" source="5" target="6" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" style="strokeColor=#333333;exitX=1;exitY=1;exitDx=0;exitDy=0;" parent="1" source="5" target="7" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="20" value="" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333" parent="1" vertex="1">
+                    <mxGeometry x="30" y="180" width="370" height="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="20t" value="项目A 容器" style="text;fontSize=9;fontStyle=1;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="100" y="185" width="200" height="18" as="geometry"/>
+                </mxCell>
+                <mxCell id="21" value="Agent引擎&#10;（用户独立实例）" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=8;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="50" y="210" width="130" height="32" as="geometry"/>
+                </mxCell>
+                <mxCell id="22" value="领域技能层&#10;（10 Skills）" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=8;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="200" y="210" width="130" height="32" as="geometry"/>
+                </mxCell>
+                <mxCell id="23" value="远程训练适配" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=8;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="50" y="252" width="130" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="24" value="挂载: /data/projects/proj_a/&#10;configs/ | datasets/ | models/ | workspace/ | outputs/" style="text;fontSize=7;fontColor=#666666;align=left" parent="1" vertex="1">
+                    <mxGeometry x="50" y="285" width="330" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="30b" value="" style="rounded=0;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#333333" parent="1" vertex="1">
+                    <mxGeometry x="430" y="180" width="370" height="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="30t" value="项目B 容器" style="text;fontSize=9;fontStyle=1;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="510" y="185" width="200" height="18" as="geometry"/>
+                </mxCell>
+                <mxCell id="31b" value="Agent引擎&#10;（用户独立实例）" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=8;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="450" y="210" width="130" height="32" as="geometry"/>
+                </mxCell>
+                <mxCell id="32b" value="领域技能层&#10;（10 Skills）" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=8;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="600" y="210" width="130" height="32" as="geometry"/>
+                </mxCell>
+                <mxCell id="33b" value="远程训练适配" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=8;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="450" y="252" width="130" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="34b" value="挂载: /data/projects/proj_b/" style="text;fontSize=7;fontColor=#666666;align=left" parent="1" vertex="1">
+                    <mxGeometry x="450" y="285" width="330" height="16" as="geometry"/>
+                </mxCell>
+                <mxCell id="40" value="远程GPU训练集群" style="rounded=0;whiteSpace=wrap;fillColor=#F0F0F0;strokeColor=#333333;fontSize=9;fontColor=#000000" parent="1" vertex="1">
+                    <mxGeometry x="200" y="370" width="420" height="32" as="geometry"/>
+                </mxCell>
+                <mxCell id="ea2" style="strokeColor=#333333;dashed=1" parent="1" source="5" target="20" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="eb2" style="strokeColor=#333333;dashed=1" parent="1" source="5" target="30b" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="ec2" style="strokeColor=#333333;dashed=1" parent="1" source="20" target="40" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="ed2" style="strokeColor=#333333;dashed=1" parent="1" source="30b" target="40" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

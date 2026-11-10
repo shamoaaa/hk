@@ -1,0 +1,99 @@
+2026-01-23 14:59:38,172 - INFO - Start to extract features...
+2026-01-23 15:07:38,734 - INFO - Finish extract features!
+2026-01-23 15:07:38,734 - INFO - Start to make peizhong pkl...
+2026-01-23 15:07:38,734 - INFO - Processing changtang_20250908...
+2026-01-23 15:07:38,734 - INFO - 	Pig_id: changtang_31354_20250908...
+2026-01-23 15:07:38,734 - WARNING - 			File 31354-2025090500-features.csv does not exist. use Nan replace
+2026-01-23 15:07:38,734 - WARNING - 			File 31354-2025090501-features.csv does not exist. use Nan replace
+2026-01-23 15:07:38,734 - WARNING - 			File 31354-2025090502-features.csv does not exist. use Nan replace
+2026-01-23 15:07:38,734 - WARNING - 			File 31354-2025090503-features.csv does not exist. use Nan replace
+2026-01-23 15:07:38,734 - WARNING - 			File 31354-2025090504-features.csv does not exist. use Nan replace
+2026-01-23 15:07:38,734 - WARNING - 			File 31354-2025090505-features.csv does not exist. use Nan replace
+2026-01-23 15:07:38,734 - WARNING - 			File 31354-2025090506-features.csv does not exist. use Nan replace
+2026-01-23 15:07:38,734 - WARNING - 			File 31354-2025090507-features.csv does not exist. use Nan replace
+2026-01-23 15:07:38,734 - WARNING - 			File 31354-2025090508-features.csv does not exist. use Nan replace
+2026-01-23 15:07:38,734 - WARNING - 			File 31354-2025090509-features.csv does not exist. use Nan replace
+2026-01-23 15:07:38,738 - WARNING - 			File 31354-2025090510-features.csv does not exist. use Nan replace
+2026-01-23 15:07:38,738 - WARNING - 			File 31354-2025090511-features.csv does not exist. use Nan replace
+2026-01-23 15:07:38,738 - WARNING - 			File 31354-2025090512-features.csv does not exist. use Nan replace
+2026-01-23 15:07:38,738 - WARNING - 			File 31354-2025090513-features.csv does not exist. use Nan replace
+2026-01-23 15:07:38,738 - WARNING - 			File 31354-2025090514-features.csv does not exist. use Nan replace
+2026-01-23 15:07:38,738 - WARNING - 			File 31354-2025090515-features.csv does not exist. use Nan replace
+2026-01-23 15:07:38,738 - WARNING - 			File 31354-2025090516-features.csv does not exist. use Nan replace
+2026-01-23 15:07:38,738 - WARNING - 			File 31354-2025090517-features.csv does not exist. use Nan replace
+2026-01-23 15:07:38,738 - WARNING - 			File 31354-2025090518-features.csv does not exist. use Nan replace
+2026-01-23 15:07:38,738 - WARNING - 			File 31354-2025090519-features.csv does not exist. use Nan replace
+2026-01-23 15:07:39,147 - INFO - Finish make peizhong pkl!
+2026-01-23 15:07:39,147 - INFO - Start to make faqing pkl...
+2026-01-23 15:07:40,825 - INFO - Dataset saved to D:\project\pig\mypig\radar_pig_pkg\workspace\faqing.pkl
+2026-01-23 15:07:40,825 - INFO - Finish make faqing pkl!
+2026-01-23 15:07:40,825 - INFO - 开始训练模型 - 类型: breeding
+2026-01-23 15:07:40,825 - INFO - 特征文件路径: D:\project\pig\mypig\radar_pig_pkg\workspace\peizhong.pkl
+2026-01-23 15:07:40,825 - INFO - 标签路径: D:\project\pig\mypig\Oestrus\label_backup
+2026-01-23 15:07:40,825 - INFO - 训练实验列表: ['changtang_20250908']
+2026-01-23 15:07:40,825 - INFO - 模型保存路径: D:\project\pig\mypig\radar_pig_pkg\workspace\breeding.model
+2026-01-23 15:07:40,825 - INFO - 创建模型保存目录: D:\project\pig\mypig\radar_pig_pkg\workspace
+2026-01-23 15:07:40,825 - INFO - 加载训练数据...
+2026-01-23 15:07:40,825 - INFO - 生成训练特征...
+2026-01-23 15:07:40,825 - INFO - 开始生成特征 - 类型: breeding
+2026-01-23 15:07:40,838 - INFO - 特征生成完成 - 样本数量: 5, 特征维度: 63
+2026-01-23 15:07:40,838 - INFO - 总共跳过了 1 个含 NaN 的样本
+2026-01-23 15:07:40,838 - INFO - 特征生成完成 - 样本数量: 5, 特征维度: 63
+2026-01-23 15:07:40,850 - INFO - 开始训练XGBoost模型...
+2026-01-23 15:07:41,171 - INFO - 模型训练完成
+2026-01-23 15:07:41,171 - INFO - 最佳得分: 0.0772843286395073
+2026-01-23 15:07:41,171 - INFO - 最佳迭代次数: 780
+2026-01-23 15:07:41,171 - INFO - 
+保存模型到: D:\project\pig\mypig\radar_pig_pkg\workspace\breeding.model
+2026-01-23 15:07:41,171 - INFO - 模型已成功保存
+2026-01-23 15:07:41,171 - INFO - 开始测试模型 - 类型: breeding
+2026-01-23 15:07:41,171 - INFO - 测试特征文件路径: D:\project\pig\mypig\radar_pig_pkg\workspace\peizhong.pkl
+2026-01-23 15:07:41,171 - INFO - 标签路径: D:\project\pig\mypig\Oestrus\label_backup
+2026-01-23 15:07:41,171 - INFO - 测试实验列表: ['changtang_20250908']
+2026-01-23 15:07:41,171 - INFO - 模型路径: D:\project\pig\mypig\radar_pig_pkg\workspace\breeding.model
+2026-01-23 15:07:41,171 - INFO - 加载测试数据...
+2026-01-23 15:07:41,185 - INFO - 加载模型...
+2026-01-23 15:07:41,191 - INFO - 开始逐个实验评估...
+2026-01-23 15:07:41,191 - INFO - 评估实验: changtang_20250908
+2026-01-23 15:07:41,191 - INFO - 开始生成特征 - 类型: breeding
+2026-01-23 15:07:41,191 - INFO - 特征生成完成 - 样本数量: 6, 特征维度: 63
+2026-01-23 15:07:41,191 - INFO - 总共跳过了 0 个含 NaN 的样本
+2026-01-23 15:07:41,203 - INFO - 
+测试结果汇总:
+2026-01-23 15:07:41,203 - INFO -          准确率              精确率               召回率
+2026-01-23 15:07:41,203 - INFO - changtang_20250908: [1.0, 1.0, 1.0]
+2026-01-23 15:07:41,203 - INFO - 开始训练模型 - 类型: breeding_offset
+2026-01-23 15:07:41,203 - INFO - 特征文件路径: D:\project\pig\mypig\radar_pig_pkg\workspace\faqing.pkl
+2026-01-23 15:07:41,203 - INFO - 标签路径: D:\project\pig\mypig\Oestrus\label_backup
+2026-01-23 15:07:41,203 - INFO - 训练实验列表: ['changtang_20250908']
+2026-01-23 15:07:41,203 - INFO - 模型保存路径: D:\project\pig\mypig\radar_pig_pkg\workspace\oestrus.model
+2026-01-23 15:07:41,203 - INFO - 创建模型保存目录: D:\project\pig\mypig\radar_pig_pkg\workspace
+2026-01-23 15:07:41,203 - INFO - 加载训练数据...
+2026-01-23 15:07:41,203 - INFO - 生成训练特征...
+2026-01-23 15:07:41,203 - INFO - 开始生成特征 - 类型: breeding_offset
+2026-01-23 15:07:41,219 - INFO - 特征生成完成 - 样本数量: 6, 特征维度: 63
+2026-01-23 15:07:41,219 - INFO - 总共跳过了 0 个含 NaN 的样本
+2026-01-23 15:07:41,219 - INFO - 特征生成完成 - 样本数量: 6, 特征维度: 63
+2026-01-23 15:07:41,239 - INFO - 开始训练XGBoost模型...
+2026-01-23 15:07:41,244 - INFO - 模型训练完成
+2026-01-23 15:07:41,244 - INFO - 最佳得分: 36.84136199951172
+2026-01-23 15:07:41,244 - INFO - 最佳迭代次数: 0
+2026-01-23 15:07:41,244 - INFO - 
+保存模型到: D:\project\pig\mypig\radar_pig_pkg\workspace\oestrus.model
+2026-01-23 15:07:41,246 - INFO - 模型已成功保存
+2026-01-23 15:07:41,246 - INFO - 开始测试模型 - 类型: breeding_offset
+2026-01-23 15:07:41,246 - INFO - 测试特征文件路径: D:\project\pig\mypig\radar_pig_pkg\workspace\faqing.pkl
+2026-01-23 15:07:41,246 - INFO - 标签路径: D:\project\pig\mypig\Oestrus\label_backup
+2026-01-23 15:07:41,246 - INFO - 测试实验列表: ['changtang_20250908']
+2026-01-23 15:07:41,246 - INFO - 模型路径: D:\project\pig\mypig\radar_pig_pkg\workspace\oestrus.model
+2026-01-23 15:07:41,246 - INFO - 加载测试数据...
+2026-01-23 15:07:41,247 - INFO - 加载模型...
+2026-01-23 15:07:41,248 - INFO - 开始逐个实验评估...
+2026-01-23 15:07:41,248 - INFO - 评估实验: changtang_20250908
+2026-01-23 15:07:41,248 - INFO - 开始生成特征 - 类型: breeding_offset
+2026-01-23 15:07:41,257 - INFO - 特征生成完成 - 样本数量: 6, 特征维度: 63
+2026-01-23 15:07:41,257 - INFO - 总共跳过了 0 个含 NaN 的样本
+2026-01-23 15:07:41,269 - INFO - 
+测试结果汇总:
+2026-01-23 15:07:41,269 - INFO -          准确率              精确率               召回率
+2026-01-23 15:07:41,269 - INFO - changtang_20250908: [0.0, 0, 0.0]

@@ -1,0 +1,586 @@
+{
+  "test_set_path": "reports/evaluation/inference_iter_e26d644a.jsonl",
+  "tag": "iter_e26d644a",
+  "total_samples": 595,
+  "overall_cer": 0.009448596770521641,
+  "overall_wer": 0.12773109243697478,
+  "scene_metrics": [
+    {
+      "scene_type": "background_music",
+      "cer": 0.009472427776310594,
+      "wer": 0.1590909090909091,
+      "sample_count": 44
+    },
+    {
+      "scene_type": "background_noise",
+      "cer": 0.011750868128745364,
+      "wer": 0.16666666666666666,
+      "sample_count": 42
+    },
+    {
+      "scene_type": "background_voice",
+      "cer": 0.009538662311291446,
+      "wer": 0.13157894736842105,
+      "sample_count": 76
+    },
+    {
+      "scene_type": "clean",
+      "cer": 0.009390610256280265,
+      "wer": 0.12,
+      "sample_count": 200
+    },
+    {
+      "scene_type": "reverb",
+      "cer": 0.0057796005164426215,
+      "wer": 0.09090909090909091,
+      "sample_count": 33
+    },
+    {
+      "scene_type": "speed_perturb",
+      "cer": 0.009589022954692963,
+      "wer": 0.125,
+      "sample_count": 200
+    }
+  ],
+  "error_type_distribution": {
+    "substitution": 84,
+    "insertion": 2,
+    "deletion": 2
+  },
+  "badcase_threshold": 0.0,
+  "badcase_count": 76,
+  "badcases": [
+    {
+      "audio_path": "/data2/shamo/project/ASR/funasr_finetune_tool/data/aishell/data_aishell/wav/test/S0764/BAC009S0764W0130.wav",
+      "reference_text": "北京仅新增住宅土地供应十宗",
+      "hypothesis_text": "北京仅新增住宅土地供应时松",
+      "scene_type": "clean",
+      "cer": 0.15384615384615385
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0130_aug_speed.wav",
+      "reference_text": "北京仅新增住宅土地供应十宗",
+      "hypothesis_text": "北京仅新增住宅土地供应时松",
+      "scene_type": "speed_perturb",
+      "cer": 0.15384615384615385
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0130_aug_music.wav",
+      "reference_text": "北京仅新增住宅土地供应十宗",
+      "hypothesis_text": "北京仅新增住宅土地供应时宗",
+      "scene_type": "background_music",
+      "cer": 0.07692307692307693
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0153_aug_babble.wav",
+      "reference_text": "住房城乡建设部政策研究中心主任秦虹表示",
+      "hypothesis_text": "住房城乡建设部政策研究中心主任秦红表示",
+      "scene_type": "background_voice",
+      "cer": 0.05263157894736842
+    },
+    {
+      "audio_path": "/data2/shamo/project/ASR/funasr_finetune_tool/data/aishell/data_aishell/wav/test/S0764/BAC009S0764W0156.wav",
+      "reference_text": "当供给远快于需求时",
+      "hypothesis_text": "当供给源快于需求时",
+      "scene_type": "clean",
+      "cer": 0.1111111111111111
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0156_aug_speed.wav",
+      "reference_text": "当供给远快于需求时",
+      "hypothesis_text": "当供给源快于需求时",
+      "scene_type": "speed_perturb",
+      "cer": 0.1111111111111111
+    },
+    {
+      "audio_path": "/data2/shamo/project/ASR/funasr_finetune_tool/data/aishell/data_aishell/wav/test/S0764/BAC009S0764W0161.wav",
+      "reference_text": "楼市调控供的行政手段宜减不宜加",
+      "hypothesis_text": "楼市调控的行政手段宜减不易加",
+      "scene_type": "clean",
+      "cer": 0.13333333333333333
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0161_aug_speed.wav",
+      "reference_text": "楼市调控供的行政手段宜减不宜加",
+      "hypothesis_text": "楼市调控的行政手段宜减不易加",
+      "scene_type": "speed_perturb",
+      "cer": 0.13333333333333333
+    },
+    {
+      "audio_path": "/data2/shamo/project/ASR/funasr_finetune_tool/data/aishell/data_aishell/wav/test/S0764/BAC009S0764W0165.wav",
+      "reference_text": "楼市调控的行政手段宜减不宜加",
+      "hypothesis_text": "楼市调控的行政手段易减不易加",
+      "scene_type": "clean",
+      "cer": 0.14285714285714285
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0165_aug_speed.wav",
+      "reference_text": "楼市调控的行政手段宜减不宜加",
+      "hypothesis_text": "楼市调控的行政手段宜减不易加",
+      "scene_type": "speed_perturb",
+      "cer": 0.07142857142857142
+    },
+    {
+      "audio_path": "/data2/shamo/project/ASR/funasr_finetune_tool/data/aishell/data_aishell/wav/test/S0764/BAC009S0764W0179.wav",
+      "reference_text": "国务院发展研究中心市场经济研究所副所长邓郁松认为",
+      "hypothesis_text": "国务院发展研究中心市场经济研究所副所长邓玉松认为",
+      "scene_type": "clean",
+      "cer": 0.041666666666666664
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0179_aug_speed.wav",
+      "reference_text": "国务院发展研究中心市场经济研究所副所长邓郁松认为",
+      "hypothesis_text": "国务院发展研究中心市场经济研究所副所长邓玉松认为",
+      "scene_type": "speed_perturb",
+      "cer": 0.041666666666666664
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0179_aug_noise.wav",
+      "reference_text": "国务院发展研究中心市场经济研究所副所长邓郁松认为",
+      "hypothesis_text": "国务院发展研究中心市场经济研究所副所长邓玉松认为",
+      "scene_type": "background_noise",
+      "cer": 0.041666666666666664
+    },
+    {
+      "audio_path": "/data2/shamo/project/ASR/funasr_finetune_tool/data/aishell/data_aishell/wav/test/S0764/BAC009S0764W0184.wav",
+      "reference_text": "对绿色高效宜居的高品质住房需求快速上升",
+      "hypothesis_text": "对绿色高效易居的高品质住房需求快速上升",
+      "scene_type": "clean",
+      "cer": 0.05263157894736842
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0184_aug_speed.wav",
+      "reference_text": "对绿色高效宜居的高品质住房需求快速上升",
+      "hypothesis_text": "对绿色高效易居的高品质住房需求快速上升",
+      "scene_type": "speed_perturb",
+      "cer": 0.05263157894736842
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0184_aug_reverb.wav",
+      "reference_text": "对绿色高效宜居的高品质住房需求快速上升",
+      "hypothesis_text": "对绿色高效易居的高品质住房需求快速上升",
+      "scene_type": "reverb",
+      "cer": 0.05263157894736842
+    },
+    {
+      "audio_path": "/data2/shamo/project/ASR/funasr_finetune_tool/data/aishell/data_aishell/wav/test/S0764/BAC009S0764W0192.wav",
+      "reference_text": "战略性新兴产业在各地呈现出集聚蓬勃发展的态势",
+      "hypothesis_text": "战略性新兴产业在各地呈现出聚集蓬勃发展的态势",
+      "scene_type": "clean",
+      "cer": 0.09090909090909091
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0192_aug_speed.wav",
+      "reference_text": "战略性新兴产业在各地呈现出集聚蓬勃发展的态势",
+      "hypothesis_text": "战略性新兴产业在各地呈现出聚集蓬勃发展的态势",
+      "scene_type": "speed_perturb",
+      "cer": 0.09090909090909091
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0192_aug_music.wav",
+      "reference_text": "战略性新兴产业在各地呈现出集聚蓬勃发展的态势",
+      "hypothesis_text": "战略性新兴产业在各地呈现出聚集蓬勃发展的态势",
+      "scene_type": "background_music",
+      "cer": 0.09090909090909091
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0198_aug_babble.wav",
+      "reference_text": "新批复了七只创投基金的设立方案",
+      "hypothesis_text": "新批复了七支创投基金的设立方案",
+      "scene_type": "background_voice",
+      "cer": 0.06666666666666667
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0198_aug_reverb.wav",
+      "reference_text": "新批复了七只创投基金的设立方案",
+      "hypothesis_text": "先批复了七只创投基金的设立方案",
+      "scene_type": "reverb",
+      "cer": 0.06666666666666667
+    },
+    {
+      "audio_path": "/data2/shamo/project/ASR/funasr_finetune_tool/data/aishell/data_aishell/wav/test/S0764/BAC009S0764W0205.wav",
+      "reference_text": "本报记者王颖春国家发改委近日发出通知",
+      "hypothesis_text": "本报记者王迎春国家发改委近日发出通知",
+      "scene_type": "clean",
+      "cer": 0.05555555555555555
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0205_aug_speed.wav",
+      "reference_text": "本报记者王颖春国家发改委近日发出通知",
+      "hypothesis_text": "本报记者王迎春国家发改委近日发出通知",
+      "scene_type": "speed_perturb",
+      "cer": 0.05555555555555555
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0205_aug_music.wav",
+      "reference_text": "本报记者王颖春国家发改委近日发出通知",
+      "hypothesis_text": "本报记者王迎春国家发改委近日发出通知",
+      "scene_type": "background_music",
+      "cer": 0.05555555555555555
+    },
+    {
+      "audio_path": "/data2/shamo/project/ASR/funasr_finetune_tool/data/aishell/data_aishell/wav/test/S0764/BAC009S0764W0211.wav",
+      "reference_text": "要加强节日期间旅游市场价格监管",
+      "hypothesis_text": "要加强节目期间旅游市场价格监管",
+      "scene_type": "clean",
+      "cer": 0.06666666666666667
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0211_aug_speed.wav",
+      "reference_text": "要加强节日期间旅游市场价格监管",
+      "hypothesis_text": "要加强节目期间旅游市场价格监管",
+      "scene_type": "speed_perturb",
+      "cer": 0.06666666666666667
+    },
+    {
+      "audio_path": "/data2/shamo/project/ASR/funasr_finetune_tool/data/aishell/data_aishell/wav/test/S0764/BAC009S0764W0219.wav",
+      "reference_text": "要加大保障性安居工程建设资计划落实力度",
+      "hypothesis_text": "要加大保障性安居工程建设投资计划落实力度",
+      "scene_type": "clean",
+      "cer": 0.05263157894736842
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0219_aug_speed.wav",
+      "reference_text": "要加大保障性安居工程建设资计划落实力度",
+      "hypothesis_text": "要加大保障性安居工程建设投资计划落实力度",
+      "scene_type": "speed_perturb",
+      "cer": 0.05263157894736842
+    },
+    {
+      "audio_path": "/data2/shamo/project/ASR/funasr_finetune_tool/data/aishell/data_aishell/wav/test/S0764/BAC009S0764W0232.wav",
+      "reference_text": "发改委将订制战略避免境外投资恶性竞争到",
+      "hypothesis_text": "发改委将定制战略避免境外投资恶性竞争到",
+      "scene_type": "clean",
+      "cer": 0.05263157894736842
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0232_aug_speed.wav",
+      "reference_text": "发改委将订制战略避免境外投资恶性竞争到",
+      "hypothesis_text": "发改委将定制战略避免境外投资恶性竞争到",
+      "scene_type": "speed_perturb",
+      "cer": 0.05263157894736842
+    },
+    {
+      "audio_path": "/data2/shamo/project/ASR/funasr_finetune_tool/data/aishell/data_aishell/wav/test/S0764/BAC009S0764W0234.wav",
+      "reference_text": "政府将制订境外投资总体战略",
+      "hypothesis_text": "政府将制定境外投资总体战略",
+      "scene_type": "clean",
+      "cer": 0.07692307692307693
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0234_aug_speed.wav",
+      "reference_text": "政府将制订境外投资总体战略",
+      "hypothesis_text": "政府将制定境外投资总体战略",
+      "scene_type": "speed_perturb",
+      "cer": 0.07692307692307693
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0234_aug_noise.wav",
+      "reference_text": "政府将制订境外投资总体战略",
+      "hypothesis_text": "政府将制定境外投资总体战略",
+      "scene_type": "background_noise",
+      "cer": 0.07692307692307693
+    },
+    {
+      "audio_path": "/data2/shamo/project/ASR/funasr_finetune_tool/data/aishell/data_aishell/wav/test/S0764/BAC009S0764W0245.wav",
+      "reference_text": "但在鼓励企业走出去方面释出多个信号",
+      "hypothesis_text": "但在鼓励企业走出去方面试出多个信号",
+      "scene_type": "clean",
+      "cer": 0.058823529411764705
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0245_aug_speed.wav",
+      "reference_text": "但在鼓励企业走出去方面释出多个信号",
+      "hypothesis_text": "但在鼓励企业走出去方面试出多个信号",
+      "scene_type": "speed_perturb",
+      "cer": 0.058823529411764705
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0245_aug_babble.wav",
+      "reference_text": "但在鼓励企业走出去方面释出多个信号",
+      "hypothesis_text": "但在鼓励企业走出去方面试出多个信号",
+      "scene_type": "background_voice",
+      "cer": 0.058823529411764705
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0245_aug_music.wav",
+      "reference_text": "但在鼓励企业走出去方面释出多个信号",
+      "hypothesis_text": "但在鼓励企业走出去方面试出多个信号",
+      "scene_type": "background_music",
+      "cer": 0.058823529411764705
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0245_aug_noise.wav",
+      "reference_text": "但在鼓励企业走出去方面释出多个信号",
+      "hypothesis_text": "但在鼓励企业走出去方面试出多个信号",
+      "scene_type": "background_noise",
+      "cer": 0.058823529411764705
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0254_aug_music.wav",
+      "reference_text": "它必须尽量做到只针对敌对国家的计算机和网络",
+      "hypothesis_text": "他必须尽量做到只针对敌对国家的计算机和网络",
+      "scene_type": "background_music",
+      "cer": 0.047619047619047616
+    },
+    {
+      "audio_path": "/data2/shamo/project/ASR/funasr_finetune_tool/data/aishell/data_aishell/wav/test/S0764/BAC009S0764W0257.wav",
+      "reference_text": "一旦战事结束或出于特殊需要可以实现自毁",
+      "hypothesis_text": "一旦战事结束或出于特殊需要可以实现四毁",
+      "scene_type": "clean",
+      "cer": 0.05263157894736842
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0257_aug_speed.wav",
+      "reference_text": "一旦战事结束或出于特殊需要可以实现自毁",
+      "hypothesis_text": "一旦战事结束或出于特殊需要可以实现四毁",
+      "scene_type": "speed_perturb",
+      "cer": 0.05263157894736842
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0257_aug_babble.wav",
+      "reference_text": "一旦战事结束或出于特殊需要可以实现自毁",
+      "hypothesis_text": "一旦战事结束或出于特殊需要可以实现四毁",
+      "scene_type": "background_voice",
+      "cer": 0.05263157894736842
+    },
+    {
+      "audio_path": "/data2/shamo/project/ASR/funasr_finetune_tool/data/aishell/data_aishell/wav/test/S0764/BAC009S0764W0266.wav",
+      "reference_text": "利用电脑病毒却可以在一秒钟内从银行盗走过亿美元",
+      "hypothesis_text": "利用电脑病毒却可以在一秒钟内从银行盗走过一美元",
+      "scene_type": "clean",
+      "cer": 0.043478260869565216
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0266_aug_speed.wav",
+      "reference_text": "利用电脑病毒却可以在一秒钟内从银行盗走过亿美元",
+      "hypothesis_text": "利用电脑病毒却可以在一秒钟内从银行盗走过一美元",
+      "scene_type": "speed_perturb",
+      "cer": 0.043478260869565216
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0266_aug_music.wav",
+      "reference_text": "利用电脑病毒却可以在一秒钟内从银行盗走过亿美元",
+      "hypothesis_text": "利用电脑病毒却可以在一秒钟内从银行盗走过一美元",
+      "scene_type": "background_music",
+      "cer": 0.043478260869565216
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0266_aug_noise.wav",
+      "reference_text": "利用电脑病毒却可以在一秒钟内从银行盗走过亿美元",
+      "hypothesis_text": "利用电脑病毒却可以在一秒钟内从银行盗走过一美元",
+      "scene_type": "background_noise",
+      "cer": 0.043478260869565216
+    },
+    {
+      "audio_path": "/data2/shamo/project/ASR/funasr_finetune_tool/data/aishell/data_aishell/wav/test/S0764/BAC009S0764W0274.wav",
+      "reference_text": "此次以一百六十七亿美元收购拓朗",
+      "hypothesis_text": "此次以一百六十七亿美元收购特朗",
+      "scene_type": "clean",
+      "cer": 0.06666666666666667
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0274_aug_speed.wav",
+      "reference_text": "此次以一百六十七亿美元收购拓朗",
+      "hypothesis_text": "此次以一百六十七亿美元收购特朗",
+      "scene_type": "speed_perturb",
+      "cer": 0.06666666666666667
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0274_aug_babble.wav",
+      "reference_text": "此次以一百六十七亿美元收购拓朗",
+      "hypothesis_text": "此次以一百六十七亿美元收购特朗",
+      "scene_type": "background_voice",
+      "cer": 0.06666666666666667
+    },
+    {
+      "audio_path": "/data2/shamo/project/ASR/funasr_finetune_tool/data/aishell/data_aishell/wav/test/S0764/BAC009S0764W0276.wav",
+      "reference_text": "正在寻求扩大移动市场份额",
+      "hypothesis_text": "正在寻求扩大异动市场份额",
+      "scene_type": "clean",
+      "cer": 0.08333333333333333
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0276_aug_speed.wav",
+      "reference_text": "正在寻求扩大移动市场份额",
+      "hypothesis_text": "正在寻求扩大异动市场份额",
+      "scene_type": "speed_perturb",
+      "cer": 0.08333333333333333
+    },
+    {
+      "audio_path": "/data2/shamo/project/ASR/funasr_finetune_tool/data/aishell/data_aishell/wav/test/S0764/BAC009S0764W0280.wav",
+      "reference_text": "英特尔首席执行官布赖恩克尔扎尼奇在一份声明中说",
+      "hypothesis_text": "英特尔首席执行官布莱恩克尔扎尼奇在一份声明中说",
+      "scene_type": "clean",
+      "cer": 0.043478260869565216
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0280_aug_speed.wav",
+      "reference_text": "英特尔首席执行官布赖恩克尔扎尼奇在一份声明中说",
+      "hypothesis_text": "英特尔首席执行官布莱恩克尔扎尼奇在一份声明中说",
+      "scene_type": "speed_perturb",
+      "cer": 0.043478260869565216
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0280_aug_music.wav",
+      "reference_text": "英特尔首席执行官布赖恩克尔扎尼奇在一份声明中说",
+      "hypothesis_text": "英特尔首席执行官布莱恩克尔扎尼奇在一份声明中说",
+      "scene_type": "background_music",
+      "cer": 0.043478260869565216
+    },
+    {
+      "audio_path": "/data2/shamo/project/ASR/funasr_finetune_tool/data/aishell/data_aishell/wav/test/S0764/BAC009S0764W0281.wav",
+      "reference_text": "合并拓朗之后将推出新的产品",
+      "hypothesis_text": "合并特朗之后将推出新的产品",
+      "scene_type": "clean",
+      "cer": 0.07692307692307693
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0281_aug_speed.wav",
+      "reference_text": "合并拓朗之后将推出新的产品",
+      "hypothesis_text": "合并特朗之后将推出新的产品",
+      "scene_type": "speed_perturb",
+      "cer": 0.07692307692307693
+    },
+    {
+      "audio_path": "/data2/shamo/project/ASR/funasr_finetune_tool/data/aishell/data_aishell/wav/test/S0764/BAC009S0764W0289.wav",
+      "reference_text": "扩大它们在新的芯片市场的份额",
+      "hypothesis_text": "扩大他们在新的芯片市场的份额",
+      "scene_type": "clean",
+      "cer": 0.07142857142857142
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0289_aug_speed.wav",
+      "reference_text": "扩大它们在新的芯片市场的份额",
+      "hypothesis_text": "扩大他们在新的芯片市场的份额",
+      "scene_type": "speed_perturb",
+      "cer": 0.07142857142857142
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0289_aug_babble.wav",
+      "reference_text": "扩大它们在新的芯片市场的份额",
+      "hypothesis_text": "扩大他们在新的芯片市场的份额",
+      "scene_type": "background_voice",
+      "cer": 0.07142857142857142
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0289_aug_reverb.wav",
+      "reference_text": "扩大它们在新的芯片市场的份额",
+      "hypothesis_text": "扩大他们在新的芯片市场的份额",
+      "scene_type": "reverb",
+      "cer": 0.07142857142857142
+    },
+    {
+      "audio_path": "/data2/shamo/project/ASR/funasr_finetune_tool/data/aishell/data_aishell/wav/test/S0764/BAC009S0764W0292.wav",
+      "reference_text": "高德纳咨询公司分析师马克黄说",
+      "hypothesis_text": "高德纳咨询公司分析师马克晃说",
+      "scene_type": "clean",
+      "cer": 0.07142857142857142
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0292_aug_speed.wav",
+      "reference_text": "高德纳咨询公司分析师马克黄说",
+      "hypothesis_text": "高德纳咨询公司分析师马克晃说",
+      "scene_type": "speed_perturb",
+      "cer": 0.07142857142857142
+    },
+    {
+      "audio_path": "/data2/shamo/project/ASR/funasr_finetune_tool/data/aishell/data_aishell/wav/test/S0764/BAC009S0764W0303.wav",
+      "reference_text": "北京商报讯记者王晔君日前",
+      "hypothesis_text": "北京商报讯记者王业军日前",
+      "scene_type": "clean",
+      "cer": 0.16666666666666666
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0303_aug_speed.wav",
+      "reference_text": "北京商报讯记者王晔君日前",
+      "hypothesis_text": "北京商报讯记者王业军日前",
+      "scene_type": "speed_perturb",
+      "cer": 0.16666666666666666
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0303_aug_babble.wav",
+      "reference_text": "北京商报讯记者王晔君日前",
+      "hypothesis_text": "北京商报讯记者王业军日前",
+      "scene_type": "background_voice",
+      "cer": 0.16666666666666666
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0303_aug_noise.wav",
+      "reference_text": "北京商报讯记者王晔君日前",
+      "hypothesis_text": "北京商报讯记者王业军日前",
+      "scene_type": "background_noise",
+      "cer": 0.16666666666666666
+    },
+    {
+      "audio_path": "/data2/shamo/project/ASR/funasr_finetune_tool/data/aishell/data_aishell/wav/test/S0764/BAC009S0764W0304.wav",
+      "reference_text": "裁员二千人是由于销售模式发生改变",
+      "hypothesis_text": "裁员两千人是由于销售模式发生改变",
+      "scene_type": "clean",
+      "cer": 0.0625
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0304_aug_speed.wav",
+      "reference_text": "裁员二千人是由于销售模式发生改变",
+      "hypothesis_text": "裁员两千人是由于销售模式发生改变",
+      "scene_type": "speed_perturb",
+      "cer": 0.0625
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0304_aug_babble.wav",
+      "reference_text": "裁员二千人是由于销售模式发生改变",
+      "hypothesis_text": "裁员两千人是由于销售模式发生改变",
+      "scene_type": "background_voice",
+      "cer": 0.0625
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0304_aug_noise.wav",
+      "reference_text": "裁员二千人是由于销售模式发生改变",
+      "hypothesis_text": "裁员两千人是由于销售模式发生改变",
+      "scene_type": "background_noise",
+      "cer": 0.0625
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0308_aug_noise.wav",
+      "reference_text": "所以今年上半年公司在全国各地的员工人数大幅增加",
+      "hypothesis_text": "所以今年上半年公司赛全国各地的员工人数大幅增加",
+      "scene_type": "background_noise",
+      "cer": 0.043478260869565216
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0310_aug_babble.wav",
+      "reference_text": "即由直销模式转变为经销模式",
+      "hypothesis_text": "仅由直销模式转变为经销模式",
+      "scene_type": "background_voice",
+      "cer": 0.07692307692307693
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0320_aug_speed.wav",
+      "reference_text": "同时公布了重组计划",
+      "hypothesis_text": "同时公布了中组计划",
+      "scene_type": "speed_perturb",
+      "cer": 0.1111111111111111
+    },
+    {
+      "audio_path": "/data2/shamo/project/ASR/funasr_finetune_tool/data/aishell/data_aishell/wav/test/S0764/BAC009S0764W0322.wav",
+      "reference_text": "并将从总部事业部及各区域公司共裁员二千人",
+      "hypothesis_text": "并将从总部事业部及各区域公司共裁员两千人",
+      "scene_type": "clean",
+      "cer": 0.05
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0322_aug_speed.wav",
+      "reference_text": "并将从总部事业部及各区域公司共裁员二千人",
+      "hypothesis_text": "并将从总部事业部及各区域公司共裁员两千人",
+      "scene_type": "speed_perturb",
+      "cer": 0.05
+    },
+    {
+      "audio_path": "data/augmented/BAC009S0764W0322_aug_babble.wav",
+      "reference_text": "并将从总部事业部及各区域公司共裁员二千人",
+      "hypothesis_text": "并将从总部事业部及各区域公司共裁员两千人",
+      "scene_type": "background_voice",
+      "cer": 0.05
+    }
+  ]
+}

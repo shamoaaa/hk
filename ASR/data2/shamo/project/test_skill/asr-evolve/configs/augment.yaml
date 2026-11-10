@@ -1,0 +1,96 @@
+# 数据增强配置
+# 与原项目"背景人声/07_augment_used/augment_config_speaker_multi.yaml"完全对齐
+
+seed: 42
+num_workers: 8
+augment_factor: 1       # 1 倍增强（多说话人组合空间大，不需要多倍）
+resume: false           # true=跳过已存在输出（断点续跑）
+
+# 增强链顺序
+chain:
+  - reverb              # 1. 主说话人房间混响
+  - speaker_mix         # 2. 混入背景说话人
+  - speed_perturb       # 3. 主说话人语速多样性
+  - eq_random           # 4. 音箱麦克风频响
+  - volume_perturb      # 5. 主说话人距离/音量
+  - gaussian_noise      # 6. 家庭环境底噪
+  - clipping            # 7. 偶发麦克风过载
+
+strategies:
+  # ========== 核心：多说话人混合 ==========
+  speaker_mix:
+    enabled: true
+    max_speakers: 3
+    random_insert: true
+    overlap_mode: "auto"         # auto = 每次随机选一种
+    min_overlap: 0.8
+    snr_range: [0, 15]           # 缩小SNR下界（去掉极端负SNR），减少目标词被背景压制
+    bg_snr_per_speaker: true
+    bg_distance_correlated: true # 距离因子关联：SNR/RT60/lowpass 由同一个 t 驱动
+    # 背景人声独立混响
+    bg_reverb: true
+    bg_rt60_range: [0.1, 0.15]
+    # 背景人声独立低通
+    bg_lowpass_range: [6500, 7800]
+    # 背景人声独立音调偏移
+    bg_pitch_shift: true
+    bg_semitone_range: [-2, 2]
+
+  # ========== 主说话人多样性 ==========
+  speed_perturb:
+    enabled: true
+    factor_range: [0.85, 1.15]
+
+  pitch_shift:
+    enabled: true
+    semitone_range: [-1.5, 1.5]
+
+  # ========== 房间声学（主说话人）==========
+  reverb:
+    enabled: true
+    rt60_range: [0.08, 0.1]      # 主说话人 0.5-2.5 米
+
+  # ========== 设备频响 ==========
+  eq_random:
+    enabled: true
+    num_bands: 6
+    gain_range: [-4, 4]
+
+  # ========== 距离/音量 ==========
+  volume_perturb:
+    enabled: true
+    gain_range: [-14, 0]         # 0.5 米≈0dB, 2.5 米≈-14dB
+
+  # ========== 环境底噪 ==========
+  gaussian_noise:
+    enabled: false
+    snr_range: [25, 40]          # 家庭底噪（扩大范围增加多样性）
+
+  # ========== 麦克风过载 ==========
+  clipping:
+    enabled: false
+    threshold_range: [0.6, 0.95]
+
+  # ========== 以下关闭 ==========
+  noise_from_file:
+    enabled: false
+  real_rir:
+    enabled: false
+  random_crop_pad:
+    enabled: false
+  time_stretch:
+    enabled: false
+  random_silence:
+    enabled: false
+  codec_simulate:
+    enabled: false
+  bandpass_filter:
+    enabled: false
+  concatenate:
+    enabled: false
+
+# 分片增量增强（ShardedAugmentor 复用）
+sharding:
+  shard_size: 500
+  workers: 4
+  cache_dir: data/pipeline/augment_cache

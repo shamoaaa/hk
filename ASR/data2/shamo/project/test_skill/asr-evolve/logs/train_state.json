@@ -1,0 +1,19 @@
+{
+  "tag": "slim_chain_v1",
+  "pid": "63037",
+  "output_dir": "/data/shamo/project/asr/output/slim_chain_v1",
+  "gpu": "3",
+  "submitted_at": "2026-07-10T11:10:08.595853",
+  "mode": "full",
+  "config_snapshot": {
+    "batch_size": 64,
+    "batch_type": "example",
+    "accum_grad": 1,
+    "max_epoch": 10,
+    "lr": 0.0001,
+    "warmup_steps": 20
+  },
+  "status": "completed",
+  "checkpoints": 1,
+  "finished_at": "2026-07-10T11:29:16.276161"
+}

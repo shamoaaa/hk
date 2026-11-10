@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Show Iteration Status",
+  "description": "每次 agent 执行完毕后，自动展示当前迭代历史和最近的训练/评估状态，让用户了解系统执行进度。",
+  "version": "1",
+  "when": {
+    "type": "agentStop"
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "cd /data2/shamo/project/test_skill/workspace && PYTHONPATH=. .venv/bin/python scripts/manage_iterations.py history 2>/dev/null; echo \"---\"; ls -t reports/evaluation/*.json 2>/dev/null | head -3; echo \"---\"; tail -3 logs/training/training_metrics.jsonl 2>/dev/null"
+  }
+}

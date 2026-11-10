@@ -1,0 +1,21 @@
+[project]
+name = "asr-evolve"
+version = "3.0.0"
+description = "Kiro-driven ASR model automated optimization platform"
+requires-python = ">=3.10"
+dependencies = [
+    "pyyaml>=6.0",
+    "paramiko>=3.0",
+    "rich>=13.0",
+    "hypothesis>=6.0",
+]
+
+[project.scripts]
+asr-evolve = "asr_evolve.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["asr_evolve*"]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"

@@ -1,0 +1,118 @@
+model:
+  name: iic/speech_seaco_paraformer_large_asr_nat-zh-cn-16k-common-vocab8404-pytorch
+  hub: ms
+  model_revision: v2.0.4
+  attention_heads: 8
+  hidden_dim: 512
+  seaco_params:
+    co_decoder_layers: 3
+    attention_weight: 0.6
+  speech_enhance_config:
+    type: conv_tasnet
+    channels: 64
+data:
+  train_jsonl: data/train.jsonl
+  val_jsonl: data/val.jsonl
+  test_jsonl: data/test.jsonl
+  original_dir: data/original
+  augmented_train_jsonl: data/augmented/train_aug.jsonl
+  augmented_val_jsonl: data/augmented/val_aug.jsonl
+  augmented_test_jsonl: data/augmented/test_aug.jsonl
+augmentation:
+  enabled: true
+  require_augmentation: true
+  noise_dir: data/musan
+  rir_dir: data/RIRS_NOISES
+  download_musan: false
+  augmented_dir: data/augmented
+  strategies:
+  - type: speed
+    probability: 1.0
+    speed_factors:
+    - 0.9
+    - 1.0
+    - 1.1
+  - type: babble
+    snr_range:
+    - 5
+    - 20
+    probability: 0.4
+    num_speakers:
+    - 1
+    - 3
+  - type: music
+    snr_range:
+    - 5
+    - 25
+    probability: 0.2
+  - type: noise
+    snr_range:
+    - 5
+    - 25
+    probability: 0.2
+  - type: reverb
+    probability: 0.15
+    rt60_range:
+    - 0.1
+    - 1.0
+training:
+  output_dir: models/iterations
+  max_epoch: 15
+  batch_size: 3000
+  batch_type: length
+  num_workers: 4
+  learning_rate: 0.0002
+  lr_schedule: step_decay
+  warmup_steps: 10
+  weight_decay: 0.05
+  gradient_clip: 3.0
+  log_interval: 10
+  validate_interval: 500
+  save_checkpoint_interval: 500
+  keep_nbest_models: 5
+  avg_nbest_model: 3
+  resume: false
+  max_token_length: 2000
+  gpu_ids: '4'
+  spec_aug:
+    enabled: true
+    num_t_mask: 2
+    num_f_mask: 2
+    max_t: 40
+    max_f: 27
+    max_w: 80
+evaluation:
+  metrics:
+  - cer
+  - wer
+  generate_report: true
+  report_dir: reports/evaluation
+  badcase_threshold: 0.3
+post_process:
+  hotword_file: null
+  enable_lm_rerank: false
+  lm_model_path: null
+  pipeline_order:
+  - regex
+  seaco_hotwords_file: configs/post_process/seaco_hotwords.txt
+  regex_rules:
+  - pattern: '[\u200b-\u200f\ufeff\u00a0]'
+    replacement: ''
+    description: Remove invisible Unicode characters (BOM, zero-width, NBSP)
+    priority: 0
+  - pattern: '[\uff01-\uff5e]'
+    replacement: ''
+    description: Full-width to half-width (handled by post_processor normalize step)
+    priority: 1
+  - pattern: ' '
+    replacement: ''
+    description: Remove spaces between Chinese characters
+    priority: 2
+  - pattern: '([。，！？、；：""''（）【】《》])'
+    replacement: ''
+    description: Remove Chinese punctuation from hypothesis
+    priority: 3
+  dedup:
+    enabled: false
+    min_repeat_chars: 3
+    description: Remove repeated phrases - DISABLED by default (speaker may intentionally repeat)

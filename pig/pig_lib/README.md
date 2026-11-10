@@ -1,0 +1,392 @@
+# Radar Pig Package 说明文档
+
+## 项目概述
+
+`radar_pig_pkg` 是一个基于毫米波雷达信号的猪只发情检测系统。该库从雷达原始数据中提取生理和行为特征，使用 XGBoost 机器学习算法进行配种和查情预测。
+
+---
+
+## 打包思路
+
+### 1. 项目结构
+
+```
+pig_lib/
+├── setup.py                    # 包配置和构建脚本
+├── build_clean_wheel.py        # 清理wheel构建脚本
+├── .env                        # 环境变量配置
+├── src/radar_pig_pkg/          # 主源代码包
+│   ├── __init__.py
+│   ├── dataset_proc/           # 数据处理模块
+│   ├── features/               # 特征提取模块
+│   ├── train_model/            # 模型训练模块
+│   └── utils/                  # 工具模块
+```
+
+### 2. 打包策略
+
+#### 2.1 Cython 编译优化
+
+项目使用 **Cython** 将所有 Python 源文件编译为 C 代码，提升计算密集型任务的执行效率：
+
+```python
+# setup.py 核心逻辑
+from Cython.Build import cythonize
+from setuptools import setup, Extension, find_packages
+
+# 自动收集 src/radar_pig_pkg 下所有 .py 文件
+extensions = []
+for root, dirs, files in os.walk(package_root):
+    for file in files:
+        if file.endswith('.py'):
+            module_name = rel_path[:-3].replace(os.sep, '.')
+            ext = Extension(module_name, [file_path])
+            extensions.append(ext)
+
+# 编译配置
+ext_modules = cythonize(
+    extensions,
+    compiler_directives={'language_level': 3, 'embedsignature': True}
+)
+```
+
+**编译选项：**
+- `language_level: 3` - 使用 Python 3 语法
+- `embedsignature: True` - 在编译文件中嵌入函数签名（便于调试）
+- `force: True` - 强制重新编译
+
+#### 2.2 依赖管理
+
+```python
+install_requires=[
+    "pandas",           # 数据处理
+    "numpy",            # 数值计算
+    "dtaidistance",     # DTW距离计算
+    "h5py",             # HDF5文件读写
+    "matplotlib",       # 可视化
+    "oss2",             # 阿里云OSS存储
+    "scikit_learn",     # 机器学习工具
+    "scipy",            # 科学计算（信号处理）
+    "xgboost"           # 梯度提升决策树模型
+]
+```
+
+#### 2.3 安装方式
+
+```bash
+# 开发模式安装
+pip install -e .
+
+# 打包为 wheel
+python setup.py bdist_wheel
+
+# 清理构建产物
+python build_clean_wheel.py
+```
+
+---
+
+## 使用接口
+
+### 模块导入
+
+```python
+from radar_pig_pkg.dataset_proc import *
+from radar_pig_pkg.features import *
+from radar_pig_pkg.train_model import breeding, oestrus
+```
+
+---
+
+### 1. 数据处理模块 (dataset_proc)
+
+#### 1.1 下载新雷达数据
+
+```python
+from radar_pig_pkg.dataset_proc import download_new_radar_files
+
+download_new_radar_files(
+    start_date_str: str,      # 起始日期，格式: '20240101'
+    end_date_str: str,        # 结束日期，格式: '20240131'
+    radar_ids: list,          # 雷达ID列表
+    local_directory: str,     # 本地保存目录
+    oss_info: dict,           # OSS配置信息
+    max_retries: int,         # 最大重试次数
+    max_workers: int          # 并行下载线程数
+)
+```
+
+**oss_info 格式：**
+```python
+oss_info = {
+    'access_key_id': 'your_access_key',
+    'access_key_secret': 'your_secret',
+    'endpoint': 'oss-cn-hangzhou.aliyuncs.com',
+    'bucket_name': 'your_bucket'
+}
+```
+
+#### 1.2 原始数据转 HDF5
+
+```python
+from radar_pig_pkg.dataset_proc import new_radar_raw2hdf
+
+new_radar_raw2hdf(
+    raw_data_folder: str,   # 原始数据文件夹路径
+    hdf_data_folder: str    # HDF5 输出文件夹路径
+)
+```
+
+**功能说明：**
+- 解析 base64 编码的二进制雷达数据
+- 按小时合并数据块
+- 输出为 HDF5 格式，包含 `frame_ids` 和 `data` 数据集
+
+---
+
+### 2. 特征提取模块 (features)
+
+#### 2.1 特征提取主函数
+
+```python
+from radar_pig_pkg.features import feature_extract
+
+feature_extract(
+    file: str,           # HDF5 文件路径
+    out_path: str,       # 输出目录路径
+    pig_prop: int        # 猪只类型 (1=?, 2=?)
+)
+```
+
+**输出特征列：**
+| 特征名 | 描述 |
+|--------|------|
+| `act` | 活动量均值 |
+| `normalize_act` | 归一化活动量 |
+| `br` | 呼吸频率 |
+| `new_br` | 优化呼吸频率 |
+| `ideal_channel` | 最佳通道索引 |
+| `hr` | 心率频率 |
+| `is_up` | 起卧状态 (1=站立, 0=卧躺) |
+| `alive` | 活体检测结果 |
+| `feature1-10` | 混淆特征 |
+
+#### 2.2 特征打包为 PKL
+
+```python
+from radar_pig_pkg.features import make_feature_pkl
+
+make_feature_pkl(
+    feature_dir: str,          # 特征目录路径
+    out_pkl_dir: str,          # 输出 PKL 目录
+    oestrus_pkl_name: str,     # 发情数据集文件名
+    breeding_pkl_name: str,    # 配种数据集文件名
+    n_processes: int           # 并行进程数
+)
+```
+
+#### 2.3 特征提取器类
+
+```python
+from radar_pig_pkg.features.core.pig_oestrus_features import PigOestrusFeatureExtractor
+
+extractor = PigOestrusFeatureExtractor(sample_rate=20)
+
+# 初始化参数
+extractor.init_param(frame_data, act_channel)
+
+# 执行特征提取
+alive_result, is_up, act, br, hr = extractor.process()
+```
+
+**PigOestrusFeatureExtractor 方法：**
+
+| 方法 | 功能 |
+|------|------|
+| `init_param(frame_data, act_channel)` | 初始化分析参数 |
+| `process()` | 执行完整特征提取 |
+| `get_act(act_amp)` | 计算活动水平 |
+| `get_br(phase)` | 提取呼吸频率 |
+| `get_hr(phase, br_freq)` | 提取心率频率 |
+| `get_up(phase, amp)` | 判断起卧状态 |
+| `get_alive_result(amp, frame_data, is_up)` | 活体检测 |
+
+---
+
+### 3. 模型训练模块 (train_model)
+
+#### 3.1 配种模型
+
+```python
+from radar_pig_pkg.train_model.breeding import train_breeding, test_breeding
+
+# 训练
+model, train_info = train_breeding(
+    feature_file_path: str,    # 特征文件路径 (.pkl)
+    label_path: str,           # 标签文件路径
+    train_exp_list: list,      # 训练实验列表
+    model_save_path: str,      # 模型保存路径
+    interval_type: str = '-2_0'  # 时间间隔类型
+)
+
+# 测试
+results = test_breeding(
+    feature_file_path: str,
+    label_path: str,
+    test_exp_list: list,
+    model_path: str,
+    interval_type: str = '-2_0'
+)
+```
+
+**返回结果：**
+```python
+{
+    'label_type': 'breeding',
+    'interval_type': '-2_0',
+    'experiments': ['exp1', 'exp2'],
+    'results': [
+        (exp_name, accuracy, precision, recall, f1, auc),  # 每个实验的结果
+        ...
+    ],
+    'summary': {
+        'accuracy': [...],
+        'precision': [...],
+        'recall': [...]
+    }
+}
+```
+
+#### 3.2 查情模型
+
+```python
+from radar_pig_pkg.train_model.oestrus import train_oestrus, test_oestrus
+
+# 训练
+model, train_info = train_oestrus(
+    feature_file_path: str,
+    label_path: str,
+    train_exp_list: list,
+    model_save_path: str,
+    interval_type: str = '-1_1'
+)
+
+# 测试
+results = test_oestrus(
+    feature_file_path: str,
+    label_path: str,
+    test_exp_list: list,
+    model_path: str,
+    interval_type: str = '-1_1'
+)
+```
+
+---
+
+### 4. 工具模块 (utils)
+
+#### 4.1 通用工具
+
+```python
+from radar_pig_pkg.utils.common_utils import (
+    get_merged_data_hdf5,  # 读取HDF5数据
+    sn2id,                 # 序列号转ID
+    fill_nan_parallel      # 并行NaN填充
+)
+```
+
+#### 4.2 OSS 工具
+
+```python
+from radar_pig_pkg.utils.oss_utils import (
+    get_bucket,      # 获取OSS Bucket
+    download_file    # 下载文件
+)
+```
+
+---
+
+## 使用示例
+
+### 完整流程示例
+
+```python
+import os
+from radar_pig_pkg.dataset_proc import new_radar_raw2hdf
+from radar_pig_pkg.features import feature_extract, make_feature_pkl
+from radar_pig_pkg.train_model.breeding import train_breeding, test_breeding
+
+# 1. 数据转换
+new_radar_raw2hdf(
+    raw_data_folder='./raw_data',
+    hdf_data_folder='./hdf5_data'
+)
+
+# 2. 特征提取
+feature_extract(
+    file='./hdf5_data/20240101/radar01-2024010100.hdf5',
+    out_path='./features',
+    pig_prop=2
+)
+
+# 3. 打包特征
+make_feature_pkl(
+    feature_dir='./features',
+    out_pkl_dir='./pkl',
+    oestrus_pkl_name='oestrus_data.pkl',
+    breeding_pkl_name='breeding_data.pkl',
+    n_processes=4
+)
+
+# 4. 训练模型
+model, info = train_breeding(
+    feature_file_path='./pkl/breeding_data.pkl',
+    label_path='./labels.csv',
+    train_exp_list=['exp1', 'exp2'],
+    model_save_path='./models/breeding.model'
+)
+
+# 5. 测试模型
+results = test_breeding(
+    feature_file_path='./pkl/breeding_data.pkl',
+    label_path='./labels.csv',
+    test_exp_list=['exp3'],
+    model_path='./models/breeding.model'
+)
+```
+
+---
+
+## 信号处理流程
+
+```
+原始雷达数据 (Base64编码)
+         ↓
+    二进制解析 (协议解析)
+         ↓
+    复数数据提取 (23通道)
+         ↓
+    ────────────────────────────
+    │        特征提取          │
+    │  ┌─────────────────────┐ │
+    │  │ 活动量检测 (0.1-6Hz) │ │
+    │  │ 呼吸检测 (0.1-1.25Hz)│ │
+    │  │ 心率检测 (0.67-2Hz)  │ │
+    │  │ 起卧状态判断         │ │
+    │  │ 活体检测             │ │
+    │  └─────────────────────┘ │
+    ────────────────────────────
+         ↓
+    特征向量 (18维)
+         ↓
+    XGBoost 分类预测
+```
+
+---
+
+## 版本信息
+
+- **包名**: radar_pig_pkg
+- **版本**: 0.1.0
+- **作者**: [待补充]
+- **许可证**: [待补充]

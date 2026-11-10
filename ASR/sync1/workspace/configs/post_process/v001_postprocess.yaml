@@ -1,0 +1,12 @@
+hotword_file: workspace/configs/post_process/hotwords.txt
+enable_lm_rerank: false
+lm_model_path: null
+pipeline_order:
+- hotword
+- regex
+- lm_rerank
+regex_rules:
+- pattern: ' '
+  replacement: ''
+  description: Remove spaces between Chinese characters
+  priority: 1

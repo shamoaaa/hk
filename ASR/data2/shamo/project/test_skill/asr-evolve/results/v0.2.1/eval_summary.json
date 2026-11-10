@@ -1,0 +1,11 @@
+{
+  "version": "v0.2.1",
+  "checkpoint": "best",
+  "test_set": "dev",
+  "samples": 300,
+  "cer": 0.1463,
+  "stripped_cer": 0.1586,
+  "recall": 0.7833,
+  "recall_hits": 235,
+  "recall_total": 300
+}

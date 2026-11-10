@@ -1,0 +1,9 @@
+Metadata-Version: 2.4
+Name: asr-evolve
+Version: 3.0.0
+Summary: Kiro-driven ASR model automated optimization platform
+Requires-Python: >=3.10
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: paramiko>=3.0
+Requires-Dist: rich>=13.0
+Requires-Dist: hypothesis>=6.0

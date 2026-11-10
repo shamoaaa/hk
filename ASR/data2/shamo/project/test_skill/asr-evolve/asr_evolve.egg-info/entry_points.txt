@@ -1,0 +1,2 @@
+[console_scripts]
+asr-evolve = asr_evolve.cli:main

@@ -1,0 +1,40 @@
+erDiagram
+    config_version ||--o{ Experiment : "config_ver"
+    dataset_version ||--o{ Experiment : "dataset_ver"
+    model_version ||--o{ Experiment : "model_ver"
+    hotword_version ||--o{ Experiment : "hotword_ver"
+
+    config_version {
+        string ver "v5"
+        json yaml_content "配置内容"
+        json diff_from_v4 "版本差异"
+        date created_at "2026-05-12"
+    }
+
+    dataset_version {
+        string ver "ds_3"
+        string file_hash "a3f2c..."
+        int sample_count "12000"
+        int split_seed "42"
+    }
+
+    model_version {
+        string ver "ckpt_5"
+        string checkpoint "best.pt"
+        string eval_metrics "CER=7.5%"
+        date created_at "2026-05-13"
+    }
+
+    hotword_version {
+        string ver "hw_2"
+        int word_count "15"
+    }
+
+    Experiment {
+        string config_ver "v5"
+        string dataset_ver "ds_3"
+        string model_ver "ckpt_5"
+        string hotword_ver "hw_2"
+        string created_by "user_a"
+        string status "success（精确可复现）"
+    }

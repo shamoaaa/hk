@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "total_experiments": 6,
+  "effective_experiments": 3,
+  "ineffective_experiments": 2,
+  "baseline_experiments": 1,
+  "dead_ends_hit": 0,
+  "backtracks": 0,
+  "total_gpu_hours": 0,
+  "initial_cer": 0.1555,
+  "current_best_cer": 0.136,
+  "cer_trajectory": [
+    {
+      "date": "2026-07-09",
+      "cer": 0.1555,
+      "node_id": "node-1",
+      "category": "training_recipe",
+      "verdict": "baseline"
+    },
+    {
+      "date": "2026-07-09",
+      "cer": 0.1463,
+      "node_id": "node-2",
+      "category": "augmentation",
+      "verdict": "effective"
+    },
+    {
+      "date": "2026-07-09",
+      "cer": 0.1452,
+      "node_id": "node-3",
+      "category": "augmentation",
+      "verdict": "effective"
+    },
+    {
+      "date": "2026-07-10",
+      "cer": 0.1452,
+      "node_id": "node-4",
+      "category": "training_recipe",
+      "verdict": "ineffective"
+    },
+    {
+      "date": "2026-07-10",
+      "cer": 0.149,
+      "node_id": "node-5",
+      "category": "training_recipe",
+      "verdict": "ineffective"
+    },
+    {
+      "date": "2026-07-10",
+      "cer": 0.136,
+      "node_id": "node-6",
+      "category": "augmentation",
+      "verdict": "effective"
+    }
+  ],
+  "by_category": {
+    "training_recipe": {
+      "attempts": 3,
+      "effective": 0,
+      "accuracy": 0.0
+    },
+    "augmentation": {
+      "attempts": 3,
+      "effective": 3,
+      "accuracy": 1.0
+    }
+  }
+}
